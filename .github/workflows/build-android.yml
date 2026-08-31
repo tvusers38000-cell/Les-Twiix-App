@@ -27,6 +27,24 @@ jobs:
       - name: Generate platform folders if missing
         run: flutter create . --platforms=android,ios --org com.lestwiix
 
+      - name: Apply official Twiix Android launcher icon
+        run: |
+          set -e
+          cp branding/android_icons/ic_launcher_mdpi.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_hdpi.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_xhdpi.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_round_mdpi.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp branding/android_icons/ic_launcher_round_hdpi.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp branding/android_icons/ic_launcher_round_xhdpi.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp branding/android_icons/ic_launcher_round_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp branding/android_icons/ic_launcher_round_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          # Flutter creates adaptive-icon XML files which keep showing the blue Flutter logo on Android 8+.
+          # Removing them makes Android/Samsung use the official Twiix mipmap images above.
+          rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+
       - name: Install dependencies
         run: flutter pub get
 
