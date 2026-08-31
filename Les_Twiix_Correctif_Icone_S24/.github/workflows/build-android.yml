@@ -1,0 +1,61 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate platform folders if missing
+        run: flutter create . --platforms=android,ios --org com.lestwiix
+
+      - name: Apply official Twiix Android launcher icon
+        run: |
+          set -e
+          cp branding/android_icons/ic_launcher_mdpi.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_hdpi.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_xhdpi.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp branding/android_icons/ic_launcher_round_mdpi.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp branding/android_icons/ic_launcher_round_hdpi.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp branding/android_icons/ic_launcher_round_xhdpi.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp branding/android_icons/ic_launcher_round_xxhdpi.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp branding/android_icons/ic_launcher_round_xxxhdpi.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          # Flutter creates adaptive-icon XML files which keep showing the blue Flutter logo on Android 8+.
+          # Removing them makes Android/Samsung use the official Twiix mipmap images above.
+          rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze lib
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Les-Twiix-APK
+          path: build/app/outputs/flutter-apk/app-debug.apk
