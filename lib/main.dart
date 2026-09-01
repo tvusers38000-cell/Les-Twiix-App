@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const pink = Color(0xFFFF2C7D);
@@ -7,6 +9,7 @@ const blue = Color(0xFF3C7CFF);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final state = await TwiixState.load();
   runApp(TwiixApp(state: state));
 }
