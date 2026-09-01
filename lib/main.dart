@@ -267,7 +267,7 @@ class HomePage extends StatelessWidget {
       const SizedBox(height: 18),
       const SectionTitle('Le QG de la communauté'),
       Row(children: [
-        Expanded(child: MiniAction(icon: Icons.forum_outlined, title: 'Communauté', subtitle: 'Actus & sondages')),
+        Expanded(child: MiniAction(icon: Icons.forum_outlined, title: 'Communauté', subtitle: 'Actus & sondages', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommunityPage(state: state))))),
         const SizedBox(width: 10),
         Expanded(child: MiniAction(icon: Icons.military_tech_outlined, title: 'Classement', subtitle: 'Twiix Points', onTap: () => onNavigate(2))),
       ]),
@@ -275,7 +275,7 @@ class HomePage extends StatelessWidget {
       Row(children: [
         Expanded(child: MiniAction(icon: Icons.workspace_premium_outlined, title: 'Top donateurs', subtitle: 'Hall of Fame', onTap: () => onNavigate(3))),
         const SizedBox(width: 10),
-        Expanded(child: MiniAction(icon: Icons.card_giftcard_outlined, title: 'Badges', subtitle: 'Récompenses')),
+        Expanded(child: MiniAction(icon: Icons.card_giftcard_outlined, title: 'Badges', subtitle: 'Récompenses', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgesPage())))),
       ]),
       const SizedBox(height: 18),
       const SectionTitle('Dernières actus'),
@@ -330,6 +330,45 @@ class DonorsPage extends StatelessWidget {
     ]);
   }
 }
+
+class CommunityPage extends StatelessWidget {
+  final TwiixState state;
+  const CommunityPage({super.key, required this.state});
+  @override
+  Widget build(BuildContext context) => PageFrame(
+    title: 'Communauté',
+    children: [
+      const SectionTitle('Actualités'),
+      const SizedBox(height: 10),
+      ...state.news.map((n) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: FeedCard(title: n.title, body: n.body),
+      )),
+      const SizedBox(height: 18),
+      const InfoCard(
+        icon: Icons.poll_outlined,
+        title: 'Sondages',
+        subtitle: 'Les sondages de la communauté arriveront prochainement.',
+      ),
+    ],
+  );
+}
+
+class BadgesPage extends StatelessWidget {
+  const BadgesPage({super.key});
+  @override
+  Widget build(BuildContext context) => PageFrame(
+    title: 'Badges & Récompenses',
+    children: const [
+      InfoCard(
+        icon: Icons.card_giftcard_outlined,
+        title: 'Badges Twiix',
+        subtitle: 'Les récompenses et badges de la communauté seront disponibles ici.',
+      ),
+    ],
+  );
+}
+
 
 class ProfilePage extends StatelessWidget {
   final TwiixState state;
