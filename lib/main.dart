@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,7 +45,7 @@ class NewsItem {
   String body;
   NewsItem(this.title, this.body);
   Map<String, dynamic> toJson() => {'title': title, 'body': body};
-  factory NewsItem.fromJson(Map<String, dynamic> j) => NewsItem(j['title'] ?? '', j['body'] ?? '');
+  factory NewsItem.fromJson(Map<String, dynamic> j) => NewsItem(j['title'] ?? '', j['content'] ?? j['body'] ?? '');
 }
 
 class LiveItem {
@@ -95,10 +96,21 @@ class TwiixState extends ChangeNotifier {
         return fallback;
       }
     }
+    List<NewsItem>? firestoreNews;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('news')
+          .orderBy('createdAt', descending: true)
+          .get();
+      firestoreNews = snap.docs
+          .map((doc) => NewsItem.fromJson(doc.data()))
+          .toList();
+    } catch (_) {}
+
     return TwiixState(
       p,
       isLive: p.getBool('isLive') ?? false,
-      news: decodeList('news', NewsItem.fromJson, [
+      news: firestoreNews ?? decodeList('news', NewsItem.fromJson, [
         NewsItem('Bienvenue dans le QG Les Twiix', 'La première vraie version de l’application communautaire démarre ici.'),
         NewsItem('Défi communautaire', 'Participe aux défis et cumule des Twiix Points.'),
       ]),
