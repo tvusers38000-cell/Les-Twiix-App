@@ -266,7 +266,7 @@ class ProfilePage extends StatelessWidget {
   @override Widget build(BuildContext context) => PageFrame(title: 'Profil', children: [
     const Center(child: Column(children: [CircleAvatar(radius: 54, backgroundImage: AssetImage('assets/images/logo_source.jpg')), SizedBox(height: 12), Text('Membre Twiix', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), Text('Prototype connecté localement', style: TextStyle(color: Colors.white60))])),
     const SizedBox(height: 18),
-    FilledButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminLoginPage(state: state))), icon: const Icon(Icons.admin_panel_settings), label: const Text('Ouvrir l’espace Admin (démo)')),
+    FilledButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FirebaseAuth.instance.currentUser != null ? AdminPage(state: state) : AdminLoginPage(state: state))), icon: const Icon(Icons.admin_panel_settings), label: const Text('Ouvrir l’espace Admin (démo)')),
     const SizedBox(height: 10), const InfoCard(icon: Icons.notifications_active_outlined, title: 'Notifications', subtitle: 'Lives, annonces importantes et résultats des défis — connexion push à venir.'),
     const SizedBox(height: 10), const InfoCard(icon: Icons.verified_user_outlined, title: 'Sécurité & modération', subtitle: 'Comptes, signalement, blocage et rôles sécurisés arriveront avec le backend.'),
   ]);
