@@ -100,7 +100,6 @@ class TwiixState extends ChangeNotifier {
     try {
       final snap = await FirebaseFirestore.instance
           .collection('news')
-          .orderBy('createdAt', descending: true)
           .get();
       firestoreNews = snap.docs
           .map((doc) => NewsItem.fromJson(doc.data()))
