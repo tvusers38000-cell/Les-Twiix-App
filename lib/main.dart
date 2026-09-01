@@ -12,6 +12,9 @@ const blue = Color(0xFF3C7CFF);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (FirebaseAuth.instance.currentUser == null) {
+    await FirebaseAuth.instance.signInAnonymously();
+  }
   final state = await TwiixState.load();
   runApp(TwiixApp(state: state));
 }
@@ -89,6 +92,27 @@ class Challenge {
   factory Challenge.fromJson(Map<String, dynamic> j) => Challenge(j['title'] ?? '', j['subtitle'] ?? '', j['points'] ?? 0);
 }
 
+class PollItem {
+  String id;
+  String question;
+  List<String> options;
+  List<int> votes;
+  DateTime endAt;
+
+  PollItem({
+    required this.id,
+    required this.question,
+    required this.options,
+    required this.votes,
+    required this.endAt,
+  });
+
+  bool get isFinished => DateTime.now().isAfter(endAt);
+
+  int get totalVotes => votes.fold(0, (total, value) => total + value);
+}
+
+
 class TwiixState extends ChangeNotifier {
   final SharedPreferences prefs;
   bool isLive;
@@ -96,8 +120,9 @@ class TwiixState extends ChangeNotifier {
   List<LiveItem> lives;
   List<Donor> donors;
   List<Challenge> challenges;
+  List<PollItem> polls;
 
-  TwiixState(this.prefs, {required this.isLive, required this.news, required this.lives, required this.donors, required this.challenges});
+  TwiixState(this.prefs, {required this.isLive, required this.news, required this.lives, required this.donors, required this.challenges, required this.polls});
 
   static Future<TwiixState> load() async {
     final p = await SharedPreferences.getInstance();
@@ -143,6 +168,30 @@ class TwiixState extends ChangeNotifier {
       });
     } catch (_) {}
 
+    List<PollItem> firestorePolls = [];
+    try {
+      final snap = await FirebaseFirestore.instance.collection('polls').get();
+      firestorePolls = snap.docs.map((doc) {
+        final data = doc.data();
+        final endTimestamp = data['endAt'];
+        final options = List<String>.from(data['options'] ?? []);
+        final votesRaw = List<dynamic>.from(data['votes'] ?? []);
+        final votes = votesRaw.map((e) => (e as num).toInt()).toList();
+
+        return PollItem(
+          id: doc.id,
+          question: data['question'] ?? '',
+          options: options,
+          votes: votes,
+          endAt: endTimestamp is Timestamp
+              ? endTimestamp.toDate()
+              : DateTime.now(),
+        );
+      }).toList();
+
+      firestorePolls.sort((a, b) => a.endAt.compareTo(b.endAt));
+    } catch (_) {}
+
     return TwiixState(
       p,
       isLive: p.getBool('isLive') ?? false,
@@ -161,6 +210,7 @@ class TwiixState extends ChangeNotifier {
       challenges: decodeList('challenges', Challenge.fromJson, [
         Challenge('Défi de la semaine', 'Twiix Dance', 150), Challenge('Clip du mois', 'Envoie ton meilleur clip', 100), Challenge('Quiz Twiix', '10 questions sur les lives', 80),
       ]),
+      polls: firestorePolls,
     );
   }
 
@@ -170,6 +220,30 @@ class TwiixState extends ChangeNotifier {
     await prefs.setString('lives', jsonEncode(lives.map((e) => e.toJson()).toList()));
     await prefs.setString('donors', jsonEncode(donors.map((e) => e.toJson()).toList()));
     await prefs.setString('challenges', jsonEncode(challenges.map((e) => e.toJson()).toList()));
+  }
+
+  Future<void> addPoll(String question, List<String> options, DateTime endAt) async {
+    final cleanOptions = options.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    if (question.trim().isEmpty || cleanOptions.length < 2) return;
+
+    final ref = await FirebaseFirestore.instance.collection('polls').add({
+      'question': question.trim(),
+      'options': cleanOptions,
+      'votes': List<int>.filled(cleanOptions.length, 0),
+      'endAt': Timestamp.fromDate(endAt),
+      'createdAt': FieldValue.serverTimestamp(),
+      'active': true,
+    });
+
+    polls.add(PollItem(
+      id: ref.id,
+      question: question.trim(),
+      options: cleanOptions,
+      votes: List<int>.filled(cleanOptions.length, 0),
+      endAt: endAt,
+    ));
+    polls.sort((a, b) => a.endAt.compareTo(b.endAt));
+    notifyListeners();
   }
 
   Future<void> setLive(bool value) async { isLive = value; notifyListeners(); await _save(); }
@@ -345,14 +419,98 @@ class CommunityPage extends StatelessWidget {
         child: FeedCard(title: n.title, body: n.body),
       )),
       const SizedBox(height: 18),
-      const InfoCard(
-        icon: Icons.poll_outlined,
-        title: 'Sondages',
-        subtitle: 'Les sondages de la communauté arriveront prochainement.',
-      ),
+      const SectionTitle('Sondages'),
+      const SizedBox(height: 10),
+      if (state.polls.isEmpty)
+        const Text('Aucun sondage pour le moment.', style: TextStyle(color: Colors.white60))
+      else
+        ...state.polls.map((p) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: PollCard(poll: p),
+        )),
     ],
   );
 }
+
+class PollCard extends StatelessWidget {
+  final PollItem poll;
+  const PollCard({super.key, required this.poll});
+
+  @override
+  Widget build(BuildContext context) {
+    final finished = poll.isFinished;
+    final end = poll.endAt;
+    final endText = '${end.day.toString().padLeft(2, '0')}/${end.month.toString().padLeft(2, '0')}/${end.year} à ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.poll_outlined, color: pink),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  poll.question,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            finished ? 'Sondage terminé' : 'Fin : $endText',
+            style: TextStyle(
+              color: finished ? Colors.white54 : Colors.white70,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...List.generate(poll.options.length, (i) {
+            final votes = i < poll.votes.length ? poll.votes[i] : 0;
+            final percent = poll.totalVotes == 0 ? 0 : ((votes / poll.totalVotes) * 100).round();
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: finished
+                  ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF17171F),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(poll.options[i])),
+                          Text('$percent%', style: const TextStyle(fontWeight: FontWeight.w800)),
+                        ],
+                      ),
+                    )
+                  : OutlinedButton(
+                      onPressed: () {},
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        alignment: Alignment.centerLeft,
+                      ),
+                      child: Text(poll.options[i]),
+                    ),
+            );
+          }),
+          if (finished)
+            Text(
+              '${poll.totalVotes} vote${poll.totalVotes > 1 ? 's' : ''}',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 
 class BadgesPage extends StatelessWidget {
   const BadgesPage({super.key});
@@ -376,11 +534,219 @@ class ProfilePage extends StatelessWidget {
   @override Widget build(BuildContext context) => PageFrame(title: 'Profil', children: [
     const Center(child: Column(children: [CircleAvatar(radius: 54, backgroundImage: AssetImage('assets/images/logo_source.jpg')), SizedBox(height: 12), Text('Membre Twiix', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), Text('Prototype connecté localement', style: TextStyle(color: Colors.white60))])),
     const SizedBox(height: 18),
-    FilledButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FirebaseAuth.instance.currentUser != null ? AdminPage(state: state) : AdminLoginPage(state: state))), icon: const Icon(Icons.admin_panel_settings), label: const Text('Ouvrir l’espace Admin (démo)')),
+    if (FirebaseAuth.instance.currentUser?.isAnonymous ?? true)
+      FilledButton.icon(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MemberSignupPage()),
+        ),
+        icon: const Icon(Icons.person_add),
+        label: const Text('Créer mon compte Twiix'),
+      ),
+    if (FirebaseAuth.instance.currentUser?.isAnonymous ?? true)
+      const SizedBox(height: 10),
+    if (FirebaseAuth.instance.currentUser?.isAnonymous ?? true)
+      OutlinedButton.icon(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MemberLoginPage()),
+        ),
+        icon: const Icon(Icons.login),
+        label: const Text('Se connecter à mon compte Twiix'),
+      ),
+    if (FirebaseAuth.instance.currentUser?.isAnonymous ?? true)
+      const SizedBox(height: 10),
+    FilledButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminLoginPage(state: state))), icon: const Icon(Icons.admin_panel_settings), label: const Text('Ouvrir l’espace Admin (démo)')),
     const SizedBox(height: 10), const InfoCard(icon: Icons.notifications_active_outlined, title: 'Notifications', subtitle: 'Lives, annonces importantes et résultats des défis — connexion push à venir.'),
     const SizedBox(height: 10), const InfoCard(icon: Icons.verified_user_outlined, title: 'Sécurité & modération', subtitle: 'Comptes, signalement, blocage et rôles sécurisés arriveront avec le backend.'),
   ]);
 }
+
+class MemberLoginPage extends StatefulWidget {
+  const MemberLoginPage({super.key});
+
+  @override
+  State<MemberLoginPage> createState() => _MemberLoginPageState();
+}
+
+class _MemberLoginPageState extends State<MemberLoginPage> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool loading = false;
+  String? error;
+
+  Future<void> login() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() => error = e.message ?? 'Connexion impossible.');
+      }
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Connexion membre')),
+    body: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          TextField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Adresse e-mail'),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Mot de passe'),
+          ),
+          const SizedBox(height: 18),
+          if (error != null)
+            Text(error!, style: const TextStyle(color: Colors.redAccent)),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: loading ? null : login,
+            icon: const Icon(Icons.login),
+            label: Text(loading ? 'Connexion...' : 'Se connecter'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class MemberSignupPage extends StatefulWidget {
+  const MemberSignupPage({super.key});
+
+  @override
+  State<MemberSignupPage> createState() => _MemberSignupPageState();
+}
+
+class _MemberSignupPageState extends State<MemberSignupPage> {
+  final pseudoController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool loading = false;
+  String? error;
+
+  Future<void> signup() async {
+    final pseudo = pseudoController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (pseudo.isEmpty || email.isEmpty || password.length < 6) {
+      setState(() => error = 'Remplis tous les champs. Le mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
+    try {
+      final auth = FirebaseAuth.instance;
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: password,
+      );
+
+      UserCredential result;
+      final currentUser = auth.currentUser;
+
+      if (currentUser != null && currentUser.isAnonymous) {
+        result = await currentUser.linkWithCredential(credential);
+      } else {
+        result = await auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      }
+
+      await user.updateDisplayName(pseudo);
+
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'pseudo': pseudo,
+        'email': email,
+        'photoUrl': '',
+        'twiixPoints': 0,
+        'featuredBadgeId': null,
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        if (e.code == 'email-already-in-use') {
+          error = 'Cette adresse e-mail possède déjà un compte.';
+        } else if (e.code == 'weak-password') {
+          error = 'Le mot de passe est trop faible.';
+        } else if (e.code == 'invalid-email') {
+          error = 'Adresse e-mail invalide.';
+        } else {
+          error = e.message ?? 'Inscription impossible.';
+        }
+      });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Créer mon compte')),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          TextField(
+            controller: pseudoController,
+            decoration: const InputDecoration(labelText: 'Pseudo'),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Adresse e-mail'),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Mot de passe'),
+          ),
+          const SizedBox(height: 18),
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+            ),
+          FilledButton.icon(
+            onPressed: loading ? null : signup,
+            icon: const Icon(Icons.person_add),
+            label: Text(loading ? 'Création...' : 'Créer mon compte Twiix'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 
 class AdminLoginPage extends StatefulWidget {
   final TwiixState state;
@@ -403,13 +769,30 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text,
       );
 
-      if (!mounted) return;
+      final uid = credential.user!.uid;
+      final adminDoc = await FirebaseFirestore.instance
+          .collection('admins')
+          .doc(uid)
+          .get();
 
+      final data = adminDoc.data();
+      final active = data?['active'] == true;
+      final role = data?['role'];
+      final allowed = active && (role == 'owner' || role == 'twiix');
+
+      if (!allowed) {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        setState(() => error = 'Ce compte n’a pas accès à l’espace Admin.');
+        return;
+      }
+
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -417,9 +800,13 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
         ),
       );
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        error = e.message ?? 'Connexion impossible';
-      });
+      if (mounted) {
+        setState(() => error = e.message ?? 'Connexion impossible.');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => error = 'Impossible de vérifier les droits Admin.');
+      }
     } finally {
       if (mounted) {
         setState(() => loading = false);
@@ -478,6 +865,7 @@ class AdminPage extends StatelessWidget {
       AdminAction(icon: Icons.delete_outline, title: 'Gérer les lives', onTap: () => _manageLivesDialog(context, state)),
       AdminAction(icon: Icons.workspace_premium, title: 'Ajouter un donateur', onTap: () => _donorDialog(context, state)),
       AdminAction(icon: Icons.emoji_events, title: 'Créer un défi', onTap: () => _challengeDialog(context, state)),
+      AdminAction(icon: Icons.poll_outlined, title: 'Créer un sondage', onTap: () => _pollDialog(context, state)),
       const SizedBox(height: 18),
       const Text('Cette V0.2 enregistre les changements sur ce téléphone uniquement. La prochaine étape connectera cet écran à une base en ligne sécurisée pour que les deux admins modifient l’app de toute la communauté.', style: TextStyle(color: Colors.white60)),
     ])),
@@ -510,6 +898,61 @@ Future<void> _challengeDialog(BuildContext context, TwiixState state) async {
   final a = TextEditingController(), b = TextEditingController(), c = TextEditingController();
   await _formDialog(context, 'Créer un défi', [('Nom', a), ('Description', b), ('Points', c)], () async { final pts = int.tryParse(c.text.trim()) ?? 0; if (a.text.trim().isNotEmpty) await state.addChallenge(a.text.trim(), b.text.trim(), pts); });
 }
+
+Future<void> _pollDialog(BuildContext context, TwiixState state) async {
+  final question = TextEditingController();
+  final option1 = TextEditingController();
+  final option2 = TextEditingController();
+  final option3 = TextEditingController();
+  final option4 = TextEditingController();
+
+  final date = await showDatePicker(
+    context: context,
+    initialDate: DateTime.now(),
+    firstDate: DateTime.now(),
+    lastDate: DateTime.now().add(const Duration(days: 365)),
+  );
+  if (date == null) return;
+
+  final time = await showTimePicker(
+    context: context,
+    initialTime: TimeOfDay.now(),
+  );
+  if (time == null) return;
+
+  final endAt = DateTime(
+    date.year,
+    date.month,
+    date.day,
+    time.hour,
+    time.minute,
+  );
+
+  await _formDialog(
+    context,
+    'Créer un sondage',
+    [
+      ('Question', question),
+      ('Réponse 1', option1),
+      ('Réponse 2', option2),
+      ('Réponse 3 (optionnelle)', option3),
+      ('Réponse 4 (optionnelle)', option4),
+    ],
+    () async {
+      await state.addPoll(
+        question.text.trim(),
+        [
+          option1.text.trim(),
+          option2.text.trim(),
+          option3.text.trim(),
+          option4.text.trim(),
+        ],
+        endAt,
+      );
+    },
+  );
+}
+
 
 Future<void> _formDialog(BuildContext context, String title, List<(String, TextEditingController)> fields, Future<void> Function() save) async {
   await showDialog(context: context, builder: (dialogContext) => AlertDialog(
