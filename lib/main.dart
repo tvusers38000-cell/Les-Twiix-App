@@ -191,6 +191,7 @@ class TwiixState extends ChangeNotifier {
     }
   }
   Future<void> addLive(String day, String time, String title, {DateTime? scheduledAt}) async { await FirebaseFirestore.instance.collection('lives').add({'day': day, 'time': time, 'title': title, 'active': true, 'scheduledAt': scheduledAt != null ? Timestamp.fromDate(scheduledAt) : null}); lives.add(LiveItem(day, time, title, scheduledAt: scheduledAt)); notifyListeners(); }
+Future<void> deleteLive(String title, DateTime? scheduledAt) async {    Query query = FirebaseFirestore.instance.collection('lives').where('title', isEqualTo: title);    final snap = await query.get();    for (final doc in snap.docs) {      final data = doc.data() as Map<String, dynamic>;      final ts = data['scheduledAt'];      final dt = ts is Timestamp ? ts.toDate() : null;      if (scheduledAt == null || dt?.millisecondsSinceEpoch == scheduledAt.millisecondsSinceEpoch) {        await doc.reference.delete();        break;      }    }    lives.removeWhere((l) => l.title == title && (scheduledAt == null || l.scheduledAt?.millisecondsSinceEpoch == scheduledAt.millisecondsSinceEpoch));    notifyListeners();  }
   Future<void> addDonor(String name, int points) async { donors.add(Donor(name, points)); donors.sort((a,b) => b.points.compareTo(a.points)); notifyListeners(); await _save(); }
   Future<void> addChallenge(String title, String subtitle, int points) async { challenges.add(Challenge(title, subtitle, points)); notifyListeners(); await _save(); }
   Future<void> resetDemo() async { await prefs.clear(); notifyListeners(); }
@@ -409,6 +410,7 @@ class AdminPage extends StatelessWidget {
       AdminAction(icon: Icons.campaign, title: 'Publier une actualité', onTap: () => _newsDialog(context, state)),
       AdminAction(icon: Icons.delete_outline, title: 'Gérer les actualités', onTap: () => _manageNewsDialog(context, state)),
       AdminAction(icon: Icons.calendar_month, title: 'Ajouter un live', onTap: () => _liveDialog(context, state)),
+      AdminAction(icon: Icons.delete_outline, title: 'Gérer les lives', onTap: () => _manageLivesDialog(context, state)),
       AdminAction(icon: Icons.workspace_premium, title: 'Ajouter un donateur', onTap: () => _donorDialog(context, state)),
       AdminAction(icon: Icons.emoji_events, title: 'Créer un défi', onTap: () => _challengeDialog(context, state)),
       const SizedBox(height: 18),
@@ -530,6 +532,64 @@ Future<void> _manageNewsDialog(BuildContext context, TwiixState state) async {
 
                     if (ok == true) {
                       await state.deleteNewsByTitle(item.title);
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Fermer'),
+        ),
+      ],
+    ),
+  );
+}
+
+Future<void> _manageLivesDialog(BuildContext context, TwiixState state) async {
+  await showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Gérer les lives'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListenableBuilder(
+          listenable: state,
+          builder: (context, _) => ListView.builder(
+            shrinkWrap: true,
+            itemCount: state.lives.length,
+            itemBuilder: (context, i) {
+              final live = state.lives[i];
+              return ListTile(
+                title: Text(live.title),
+                subtitle: Text('${live.day} • ${live.time}'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (confirmContext) => AlertDialog(
+                        title: const Text('Supprimer ce live ?'),
+                        content: Text('${live.title}\n${live.day} • ${live.time}'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(confirmContext, false),
+                            child: const Text('Annuler'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(confirmContext, true),
+                            child: const Text('Supprimer'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (ok == true) {
+                      await state.deleteLive(live.title, live.scheduledAt);
                     }
                   },
                 ),
