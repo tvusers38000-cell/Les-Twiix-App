@@ -54,9 +54,22 @@ class LiveItem {
   String time;
   String title;
   bool active;
-  LiveItem(this.day, this.time, this.title, {this.active = true});
-  Map<String, dynamic> toJson() => {'day': day, 'time': time, 'title': title, 'active': active};
-  factory LiveItem.fromJson(Map<String, dynamic> j) => LiveItem(j['day'] ?? '', j['time'] ?? '', j['title'] ?? '', active: j['active'] ?? true);
+  DateTime? scheduledAt;
+  LiveItem(this.day, this.time, this.title, {this.active = true, this.scheduledAt});
+  Map<String, dynamic> toJson() => {
+    'day': day,
+    'time': time,
+    'title': title,
+    'active': active,
+    'scheduledAt': scheduledAt?.toIso8601String(),
+  };
+  factory LiveItem.fromJson(Map<String, dynamic> j) => LiveItem(
+    j['day'] ?? '',
+    j['time'] ?? '',
+    j['title'] ?? '',
+    active: j['active'] ?? true,
+    scheduledAt: j['scheduledAt'] != null ? DateTime.tryParse(j['scheduledAt']) : null,
+  );
 }
 
 class Donor {
@@ -107,6 +120,29 @@ class TwiixState extends ChangeNotifier {
           .toList();
     } catch (_) {}
 
+    List<LiveItem>? firestoreLives;
+    try {
+      final snap = await FirebaseFirestore.instance.collection('lives').get();
+      final now = DateTime.now();
+      firestoreLives = snap.docs.map((doc) {
+        final data = doc.data();
+        final timestamp = data['scheduledAt'];
+        final scheduledAt = timestamp is Timestamp ? timestamp.toDate() : null;
+        return LiveItem(
+          data['day'] ?? '',
+          data['time'] ?? '',
+          data['title'] ?? '',
+          active: data['active'] ?? true,
+          scheduledAt: scheduledAt,
+        );
+      }).where((live) => live.scheduledAt == null || live.scheduledAt!.isAfter(now)).toList();
+      firestoreLives.sort((a, b) {
+        if (a.scheduledAt == null) return 1;
+        if (b.scheduledAt == null) return -1;
+        return a.scheduledAt!.compareTo(b.scheduledAt!);
+      });
+    } catch (_) {}
+
     return TwiixState(
       p,
       isLive: p.getBool('isLive') ?? false,
@@ -114,7 +150,7 @@ class TwiixState extends ChangeNotifier {
         NewsItem('Bienvenue dans le QG Les Twiix', 'La première vraie version de l’application communautaire démarre ici.'),
         NewsItem('Défi communautaire', 'Participe aux défis et cumule des Twiix Points.'),
       ]),
-      lives: decodeList('lives', LiveItem.fromJson, [
+      lives: firestoreLives ?? decodeList('lives', LiveItem.fromJson, [
         LiveItem('Lundi', '17h00', 'Live TikTok'),
         LiveItem('Mercredi', '17h00', 'Live TikTok'),
         LiveItem('Vendredi', '20h30', 'MR Club Pro'),
@@ -154,7 +190,7 @@ class TwiixState extends ChangeNotifier {
       notifyListeners();
     }
   }
-  Future<void> addLive(String day, String time, String title) async { lives.add(LiveItem(day, time, title)); notifyListeners(); await _save(); }
+  Future<void> addLive(String day, String time, String title, {DateTime? scheduledAt}) async { await FirebaseFirestore.instance.collection('lives').add({'day': day, 'time': time, 'title': title, 'active': true, 'scheduledAt': scheduledAt != null ? Timestamp.fromDate(scheduledAt) : null}); lives.add(LiveItem(day, time, title, scheduledAt: scheduledAt)); notifyListeners(); }
   Future<void> addDonor(String name, int points) async { donors.add(Donor(name, points)); donors.sort((a,b) => b.points.compareTo(a.points)); notifyListeners(); await _save(); }
   Future<void> addChallenge(String title, String subtitle, int points) async { challenges.add(Challenge(title, subtitle, points)); notifyListeners(); await _save(); }
   Future<void> resetDemo() async { await prefs.clear(); notifyListeners(); }
@@ -242,7 +278,7 @@ class LivesPage extends StatelessWidget {
   final TwiixState state;
   const LivesPage({super.key, required this.state});
   @override Widget build(BuildContext context) => PageFrame(title: 'Planning des lives', children: [
-    ...state.lives.map((l) => Padding(padding: const EdgeInsets.only(bottom: 10), child: InfoCard(icon: Icons.live_tv, title: '${l.day} • ${l.time}', subtitle: l.title, trailing: 'Rappel'))),
+    ...state.lives.where((l) => l.scheduledAt == null || l.scheduledAt!.isAfter(DateTime.now())).map((l) => Padding(padding: const EdgeInsets.only(bottom: 10), child: InfoCard(icon: Icons.live_tv, title: '${l.day} • ${l.time}', subtitle: l.title, trailing: 'Rappel'))),
   ]);
 }
 
@@ -386,8 +422,18 @@ Future<void> _newsDialog(BuildContext context, TwiixState state) async {
   await _formDialog(context, 'Nouvelle actualité', [('Titre', a), ('Message', b)], () async { if (a.text.trim().isNotEmpty && b.text.trim().isNotEmpty) await state.addNews(a.text.trim(), b.text.trim()); });
 }
 Future<void> _liveDialog(BuildContext context, TwiixState state) async {
-  final a = TextEditingController(), b = TextEditingController(), c = TextEditingController();
-  await _formDialog(context, 'Ajouter un live', [('Jour', a), ('Heure', b), ('Titre', c)], () async { if (a.text.trim().isNotEmpty) await state.addLive(a.text.trim(), b.text.trim(), c.text.trim()); });
+  final titleController = TextEditingController();
+  final date = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
+  if (date == null) return;
+  if (!context.mounted) return;
+  final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+  if (time == null) return;
+  final scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  final day = "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+  final hour = "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
+  await _formDialog(context, 'Ajouter un live', [('Titre', titleController)], () async {
+    if (titleController.text.trim().isNotEmpty) await state.addLive(day, hour, titleController.text.trim(), scheduledAt: scheduledAt);
+  });
 }
 Future<void> _donorDialog(BuildContext context, TwiixState state) async {
   final a = TextEditingController(), b = TextEditingController();
