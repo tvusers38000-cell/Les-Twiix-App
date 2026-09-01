@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -136,7 +137,15 @@ class TwiixState extends ChangeNotifier {
   }
 
   Future<void> setLive(bool value) async { isLive = value; notifyListeners(); await _save(); }
-  Future<void> addNews(String title, String body) async { news.insert(0, NewsItem(title, body)); notifyListeners(); await _save(); }
+  Future<void> addNews(String title, String body) async {
+    await FirebaseFirestore.instance.collection('news').add({
+      'title': title,
+      'content': body,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    news.insert(0, NewsItem(title, body));
+    notifyListeners();
+  }
   Future<void> addLive(String day, String time, String title) async { lives.add(LiveItem(day, time, title)); notifyListeners(); await _save(); }
   Future<void> addDonor(String name, int points) async { donors.add(Donor(name, points)); donors.sort((a,b) => b.points.compareTo(a.points)); notifyListeners(); await _save(); }
   Future<void> addChallenge(String title, String subtitle, int points) async { challenges.add(Challenge(title, subtitle, points)); notifyListeners(); await _save(); }
@@ -257,12 +266,94 @@ class ProfilePage extends StatelessWidget {
   @override Widget build(BuildContext context) => PageFrame(title: 'Profil', children: [
     const Center(child: Column(children: [CircleAvatar(radius: 54, backgroundImage: AssetImage('assets/images/logo_source.jpg')), SizedBox(height: 12), Text('Membre Twiix', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), Text('Prototype connecté localement', style: TextStyle(color: Colors.white60))])),
     const SizedBox(height: 18),
-    FilledButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminPage(state: state))), icon: const Icon(Icons.admin_panel_settings), label: const Text('Ouvrir l’espace Admin (démo)')),
+    FilledButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminLoginPage(state: state))), icon: const Icon(Icons.admin_panel_settings), label: const Text('Ouvrir l’espace Admin (démo)')),
     const SizedBox(height: 10), const InfoCard(icon: Icons.notifications_active_outlined, title: 'Notifications', subtitle: 'Lives, annonces importantes et résultats des défis — connexion push à venir.'),
     const SizedBox(height: 10), const InfoCard(icon: Icons.verified_user_outlined, title: 'Sécurité & modération', subtitle: 'Comptes, signalement, blocage et rôles sécurisés arriveront avec le backend.'),
   ]);
 }
 
+class AdminLoginPage extends StatefulWidget {
+  final TwiixState state;
+  const AdminLoginPage({super.key, required this.state});
+
+  @override
+  State<AdminLoginPage> createState() => _AdminLoginPageState();
+}
+
+class _AdminLoginPageState extends State<AdminLoginPage> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool loading = false;
+  String? error;
+
+  Future<void> login() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdminPage(state: widget.state),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        error = e.message ?? 'Connexion impossible';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Connexion Admin')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Adresse e-mail',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Mot de passe',
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (error != null)
+              Text(error!, style: const TextStyle(color: Colors.redAccent)),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: loading ? null : login,
+              child: Text(loading ? 'Connexion...' : 'Se connecter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 class AdminPage extends StatelessWidget {
   final TwiixState state;
   const AdminPage({super.key, required this.state});
