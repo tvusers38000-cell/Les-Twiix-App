@@ -146,6 +146,14 @@ class TwiixState extends ChangeNotifier {
     news.insert(0, NewsItem(title, body));
     notifyListeners();
   }
+  Future<void> deleteNewsByTitle(String title) async {
+    final snap = await FirebaseFirestore.instance.collection('news').where('title', isEqualTo: title).limit(1).get();
+    if (snap.docs.isNotEmpty) {
+      await snap.docs.first.reference.delete();
+      news.removeWhere((e) => e.title == title);
+      notifyListeners();
+    }
+  }
   Future<void> addLive(String day, String time, String title) async { lives.add(LiveItem(day, time, title)); notifyListeners(); await _save(); }
   Future<void> addDonor(String name, int points) async { donors.add(Donor(name, points)); donors.sort((a,b) => b.points.compareTo(a.points)); notifyListeners(); await _save(); }
   Future<void> addChallenge(String title, String subtitle, int points) async { challenges.add(Challenge(title, subtitle, points)); notifyListeners(); await _save(); }
@@ -363,6 +371,7 @@ class AdminPage extends StatelessWidget {
       Container(padding: const EdgeInsets.all(16), decoration: cardDecoration(), child: SwitchListTile(contentPadding: EdgeInsets.zero, value: state.isLive, onChanged: state.setLive, title: const Text('Statut LIVE', style: TextStyle(fontWeight: FontWeight.w900)), subtitle: Text(state.isLive ? 'La communauté voit “EN LIVE”.' : 'La communauté voit “HORS LIVE”.'))),
       const SizedBox(height: 12),
       AdminAction(icon: Icons.campaign, title: 'Publier une actualité', onTap: () => _newsDialog(context, state)),
+      AdminAction(icon: Icons.delete_outline, title: 'Gérer les actualités', onTap: () => _manageNewsDialog(context, state)),
       AdminAction(icon: Icons.calendar_month, title: 'Ajouter un live', onTap: () => _liveDialog(context, state)),
       AdminAction(icon: Icons.workspace_premium, title: 'Ajouter un donateur', onTap: () => _donorDialog(context, state)),
       AdminAction(icon: Icons.emoji_events, title: 'Créer un défi', onTap: () => _challengeDialog(context, state)),
@@ -434,3 +443,61 @@ class DonorTile extends StatelessWidget {
 }
 
 BoxDecoration cardDecoration() => BoxDecoration(color: const Color(0xFF111117), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0x22FFFFFF)));
+
+Future<void> _manageNewsDialog(BuildContext context, TwiixState state) async {
+  await showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Gérer les actualités'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListenableBuilder(
+          listenable: state,
+          builder: (context, _) => ListView.builder(
+            shrinkWrap: true,
+            itemCount: state.news.length,
+            itemBuilder: (context, i) {
+              final item = state.news[i];
+              return ListTile(
+                title: Text(item.title),
+                subtitle: Text(item.body),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (confirmContext) => AlertDialog(
+                        title: const Text('Supprimer cette actualité ?'),
+                        content: Text(item.title),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(confirmContext, false),
+                            child: const Text('Annuler'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(confirmContext, true),
+                            child: const Text('Supprimer'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (ok == true) {
+                      await state.deleteNewsByTitle(item.title);
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Fermer'),
+        ),
+      ],
+    ),
+  );
+}
