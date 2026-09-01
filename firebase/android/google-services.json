@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "259034172860",
+    "project_id": "les-twiix",
+    "storage_bucket": "les-twiix.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:259034172860:android:032f5132f88d234e2fafb9",
+        "android_client_info": {
+          "package_name": "com.lestwiix.les_twiix_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsNaxQd5qCA7QC33IdAajHCqby6SWtzHo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

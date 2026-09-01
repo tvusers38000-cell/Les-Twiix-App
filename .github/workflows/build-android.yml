@@ -45,6 +45,9 @@ jobs:
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 
+      - name: Add Firebase Android config
+        run: cp firebase/android/google-services.json android/app/google-services.json
+
       - name: Install dependencies
         run: flutter pub get
 
