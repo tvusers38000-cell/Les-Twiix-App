@@ -210,7 +210,7 @@ class _ShellState extends State<Shell> {
     return ListenableBuilder(
       listenable: widget.state,
       builder: (context, _) {
-        final pages = [HomePage(state: widget.state), LivesPage(state: widget.state), ChallengesPage(state: widget.state), DonorsPage(state: widget.state), ProfilePage(state: widget.state)];
+        final pages = [HomePage(state: widget.state, onNavigate: (i) => setState(() => index = i)), LivesPage(state: widget.state), ChallengesPage(state: widget.state), DonorsPage(state: widget.state), ProfilePage(state: widget.state)];
         return Scaffold(
           body: SafeArea(child: IndexedStack(index: index, children: pages)),
           bottomNavigationBar: NavigationBar(
@@ -248,17 +248,43 @@ class PageFrame extends StatelessWidget {
 
 class HomePage extends StatelessWidget {
   final TwiixState state;
-  const HomePage({super.key, required this.state});
-  @override Widget build(BuildContext context) => PageFrame(title: 'LES TWIIX', children: [
-    HeroCard(isLive: state.isLive), const SizedBox(height: 16),
-    const SectionTitle('Prochain live'),
-    if (state.lives.isNotEmpty) InfoCard(icon: Icons.schedule, title: '${state.lives.first.day} • ${state.lives.first.time}', subtitle: state.lives.first.title, trailing: 'Me rappeler'),
-    const SizedBox(height: 18), const SectionTitle('Le QG de la communauté'),
-    const Row(children: [Expanded(child: MiniAction(icon: Icons.forum_outlined, title: 'Communauté', subtitle: 'Actus & sondages')), SizedBox(width: 10), Expanded(child: MiniAction(icon: Icons.military_tech_outlined, title: 'Classement', subtitle: 'Twiix Points'))]),
-    const SizedBox(height: 10), const Row(children: [Expanded(child: MiniAction(icon: Icons.workspace_premium_outlined, title: 'Top donateurs', subtitle: 'Hall of Fame')), SizedBox(width: 10), Expanded(child: MiniAction(icon: Icons.card_giftcard_outlined, title: 'Badges', subtitle: 'Récompenses'))]),
-    const SizedBox(height: 18), const SectionTitle('Dernières actus'),
-    ...state.news.take(5).map((n) => Padding(padding: const EdgeInsets.only(bottom: 10), child: FeedCard(title: n.title, body: n.body))),
-  ]);
+  final ValueChanged<int> onNavigate;
+  const HomePage({super.key, required this.state, required this.onNavigate});
+  @override
+  Widget build(BuildContext context) => PageFrame(
+    title: 'LES TWIIX',
+    children: [
+      HeroCard(isLive: state.isLive),
+      const SizedBox(height: 16),
+      const SectionTitle('Prochain live'),
+      if (state.lives.isNotEmpty)
+        InfoCard(
+          icon: Icons.schedule,
+          title: '${state.lives.first.day} • ${state.lives.first.time}',
+          subtitle: state.lives.first.title,
+          trailing: 'Me rappeler',
+        ),
+      const SizedBox(height: 18),
+      const SectionTitle('Le QG de la communauté'),
+      Row(children: [
+        Expanded(child: MiniAction(icon: Icons.forum_outlined, title: 'Communauté', subtitle: 'Actus & sondages')),
+        const SizedBox(width: 10),
+        Expanded(child: MiniAction(icon: Icons.military_tech_outlined, title: 'Classement', subtitle: 'Twiix Points', onTap: () => onNavigate(2))),
+      ]),
+      const SizedBox(height: 10),
+      Row(children: [
+        Expanded(child: MiniAction(icon: Icons.workspace_premium_outlined, title: 'Top donateurs', subtitle: 'Hall of Fame', onTap: () => onNavigate(3))),
+        const SizedBox(width: 10),
+        Expanded(child: MiniAction(icon: Icons.card_giftcard_outlined, title: 'Badges', subtitle: 'Récompenses')),
+      ]),
+      const SizedBox(height: 18),
+      const SectionTitle('Dernières actus'),
+      ...state.news.take(5).map((n) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: FeedCard(title: n.title, body: n.body),
+      )),
+    ],
+  );
 }
 
 class HeroCard extends StatelessWidget {
@@ -470,9 +496,29 @@ class InfoCard extends StatelessWidget {
   @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(15), decoration: cardDecoration(), child: Row(children: [CircleAvatar(backgroundColor: const Color(0x22FF2C7D), child: Icon(icon, color: pink)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text(subtitle, style: const TextStyle(color: Colors.white60))])), if (trailing != null) Text(trailing!, style: const TextStyle(color: pink, fontWeight: FontWeight.w700))]));
 }
 class MiniAction extends StatelessWidget {
-  final IconData icon; final String title; final String subtitle;
-  const MiniAction({super.key, required this.icon, required this.title, required this.subtitle});
-  @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(14), decoration: cardDecoration(), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: pink), const SizedBox(height: 12), Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12))]));
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+  const MiniAction({super.key, required this.icon, required this.title, required this.subtitle, this.onTap});
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(18),
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: cardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: pink),
+          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        ],
+      ),
+    ),
+  );
 }
 class FeedCard extends StatelessWidget {
   final String title; final String body;
