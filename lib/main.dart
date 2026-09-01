@@ -679,6 +679,7 @@ class _MemberSignupPageState extends State<MemberSignupPage> {
         );
       }
 
+      final user = result.user!;
       await user.updateDisplayName(pseudo);
 
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
