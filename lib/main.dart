@@ -1277,6 +1277,7 @@ class BadgesPage extends StatelessWidget {
   static const badges = [
     {
       'id': 'first_vote',
+      'image': 'assets/images/badges/premier_vote.png',
       'title': 'Premier vote',
       'description': 'Tu as participé à ton premier sondage Twiix.',
       'howTo': 'Participe à ton premier sondage de la communauté.',
@@ -1285,6 +1286,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'polls_10',
+      'image': 'assets/images/badges/habitue_sondages_10.png',
       'title': 'Habitué des sondages',
       'description': '10 sondages Twiix à ton actif.',
       'howTo': 'Participe à 10 sondages différents.',
@@ -1293,6 +1295,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'polls_50',
+      'image': 'assets/images/badges/expert_sondages_50.png',
       'title': 'Expert des sondages',
       'description': 'Tu es devenu un véritable expert des sondages Twiix.',
       'howTo': 'Participe à 50 sondages différents.',
@@ -1301,6 +1304,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'polls_100',
+      'image': 'assets/images/badges/legende_sondages_100.png',
       'title': 'Légende des sondages',
       'description': '100 sondages : tu entres dans la légende.',
       'howTo': 'Participe à 100 sondages différents.',
@@ -1309,6 +1313,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'first_challenge',
+      'image': 'assets/images/badges/premier_defi.png',
       'title': 'Premier défi',
       'description': 'Tu as relevé ton premier défi Twiix.',
       'howTo': 'Participe à ton premier défi.',
@@ -1317,6 +1322,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'challenges_10',
+      'image': 'assets/images/badges/competiteur_10.png',
       'title': 'Compétiteur',
       'description': '10 défis Twiix relevés.',
       'howTo': 'Participe à 10 défis différents.',
@@ -1325,6 +1331,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'challenges_50',
+      'image': 'assets/images/badges/maitre_defis_50.png',
       'title': 'Maître des défis',
       'description': 'Tu maîtrises les défis Twiix.',
       'howTo': 'Réalise 50 défis.',
@@ -1333,6 +1340,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'challenges_100',
+      'image': 'assets/images/badges/legende_twiix_100.png',
       'title': 'Légende Twiix',
       'description': '100 défis accomplis. Un exploit légendaire.',
       'howTo': 'Réalise 100 défis.',
@@ -1341,6 +1349,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'first_event',
+      'image': 'assets/images/badges/present_rendez_vous.png',
       'title': 'Présent au rendez-vous',
       'description': 'Tu as participé à ton premier événement Twiix.',
       'howTo': 'Participe à ton premier événement Twiix.',
@@ -1349,6 +1358,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'twiix_supporter',
+      'image': 'assets/images/badges/supporter_twiix.png',
       'title': 'Supporter Twiix',
       'description': 'Tu fais partie des membres fidèles de la communauté.',
       'howTo': 'Montre ta fidélité à la communauté Twiix.',
@@ -1569,20 +1579,18 @@ class BadgesPage extends StatelessWidget {
                             Stack(
                               clipBehavior: Clip.none,
                               children: [
-                                if (secret && unlocked)
-                                  Image.asset(
-                                    badge['image'] as String,
-                                    width: 90,
-                                    height: 90,
-                                    fit: BoxFit.contain,
+                                if (hidden)
+                                  const Icon(
+                                    Icons.help_outline_rounded,
+                                    size: 70,
+                                    color: Colors.white70,
                                   )
                                 else
-                                  Icon(
-                                    hidden
-                                        ? Icons.help_outline_rounded
-                                        : badge['icon'] as IconData,
-                                    size: 56,
-                                    color: unlocked ? pink : Colors.white70,
+                                  Image.asset(
+                                    badge['image'] as String,
+                                    width: 110,
+                                    height: 110,
+                                    fit: BoxFit.contain,
                                   ),
                                 if (!unlocked)
                                   const Positioned(
