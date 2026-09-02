@@ -537,6 +537,58 @@ class ProfilePage extends StatelessWidget {
     await FirebaseAuth.instance.signInAnonymously();
   }
 
+  Future<void> openAdmin(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null && !user.isAnonymous) {
+      try {
+        final adminDoc = await FirebaseFirestore.instance
+            .collection('admins')
+            .doc(user.uid)
+            .get();
+
+        final data = adminDoc.data();
+        final active = data?['active'] == true;
+        final role = data?['role'];
+        final allowed = active && (role == 'owner' || role == 'twiix');
+
+        if (allowed) {
+          if (!context.mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminPage(state: state),
+            ),
+          );
+          return;
+        }
+
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ce compte n’a pas accès à l’espace Admin.'),
+          ),
+        );
+        return;
+      } catch (_) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossible de vérifier les droits Admin.'),
+          ),
+        );
+        return;
+      }
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminLoginPage(state: state),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -589,10 +641,7 @@ class ProfilePage extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => AdminLoginPage(state: state)),
-                ),
+                  onPressed: () => openAdmin(context),
                 icon: const Icon(Icons.admin_panel_settings),
                 label: const Text('Accès Admin / Twiix'),
               ),
@@ -709,10 +758,7 @@ class ProfilePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 OutlinedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => AdminLoginPage(state: state)),
-                  ),
+                    onPressed: () => openAdmin(context),
                   icon: const Icon(Icons.admin_panel_settings),
                   label: const Text('Accès Admin / Twiix'),
                 ),
@@ -992,6 +1038,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
       if (!allowed) {
         await FirebaseAuth.instance.signOut();
+          await FirebaseAuth.instance.signInAnonymously();
         if (!mounted) return;
         setState(() => error = 'Ce compte n’a pas accès à l’espace Admin.');
         return;
