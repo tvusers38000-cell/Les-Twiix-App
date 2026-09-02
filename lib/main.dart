@@ -1044,7 +1044,6 @@ class ProfilePage extends StatelessWidget {
                 ? pseudo
                 : (user.displayName ?? 'Membre Twiix');
             final points = (data['twiixPoints'] as num?)?.toInt() ?? 0;
-            final featuredBadge = data['featuredBadgeId'] as String?;
 
             return PageFrame(
               title: 'Mon profil',
