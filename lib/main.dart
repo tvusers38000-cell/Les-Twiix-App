@@ -820,7 +820,6 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
               child: const Text('Mot de passe oublié ?'),
             ),
           ),
-          ),
           const SizedBox(height: 18),
           if (error != null)
             Text(error!, style: const TextStyle(color: Colors.redAccent)),
@@ -936,7 +935,6 @@ class _MemberSignupPageState extends State<MemberSignupPage> {
             controller: passwordController,
             obscureText: true,
             decoration: const InputDecoration(labelText: 'Mot de passe'),
-          ),
           ),
           const SizedBox(height: 18),
           if (error != null)
