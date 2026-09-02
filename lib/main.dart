@@ -896,13 +896,33 @@ class _PollCardState extends State<PollCard> {
       if (!mounted) return;
 
       if (unlockedProgressBadges.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Badge débloqué : ${unlockedProgressBadges.join(', ')} !',
-            ),
-          ),
-        );
+        for (final badgeName in unlockedProgressBadges) {
+          if (!mounted) return;
+
+          switch (badgeName) {
+            case 'Habitué des sondages':
+              await showBadgeUnlockAnimation(
+                title: 'Habitué des sondages',
+                imagePath: 'assets/images/badges/habitue_sondages_10.png',
+                message: '10 sondages Twiix à ton actif !',
+              );
+              break;
+            case 'Expert des sondages':
+              await showBadgeUnlockAnimation(
+                title: 'Expert des sondages',
+                imagePath: 'assets/images/badges/expert_sondages_50.png',
+                message: '50 sondages Twiix à ton actif !',
+              );
+              break;
+            case 'Légende des sondages':
+              await showBadgeUnlockAnimation(
+                title: 'Légende des sondages',
+                imagePath: 'assets/images/badges/legende_sondages_100.png',
+                message: '100 sondages Twiix à ton actif. Légendaire !',
+              );
+              break;
+          }
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -921,7 +941,11 @@ class _PollCardState extends State<PollCard> {
     }
   }
 
-  Future<void> showBadgeUnlockAnimation() async {
+  Future<void> showBadgeUnlockAnimation({
+    String title = 'Premier vote',
+    String imagePath = 'assets/images/badges/premier_vote.png',
+    String message = 'Tu viens de débloquer ton premier badge Twiix !',
+  }) async {
     if (!mounted) return;
 
     final navigator = Navigator.of(context, rootNavigator: true);
@@ -969,14 +993,14 @@ class _PollCardState extends State<PollCard> {
                   ),
                   SizedBox(height: 22),
                     Image.asset(
-                      'assets/images/badges/premier_vote.png',
+                      imagePath,
                       width: 140,
                       height: 140,
                       fit: BoxFit.contain,
                     ),
                   SizedBox(height: 18),
                   Text(
-                    'Premier vote',
+                    title,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 26,
@@ -985,7 +1009,7 @@ class _PollCardState extends State<PollCard> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Tu viens de débloquer ton premier badge Twiix !',
+                    message,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white70,
