@@ -266,6 +266,23 @@ class TwiixState extends ChangeNotifier {
   }
   Future<void> addLive(String day, String time, String title, {DateTime? scheduledAt}) async { await FirebaseFirestore.instance.collection('lives').add({'day': day, 'time': time, 'title': title, 'active': true, 'scheduledAt': scheduledAt != null ? Timestamp.fromDate(scheduledAt) : null}); lives.add(LiveItem(day, time, title, scheduledAt: scheduledAt)); notifyListeners(); }
 Future<void> deleteLive(String title, DateTime? scheduledAt) async {    Query query = FirebaseFirestore.instance.collection('lives').where('title', isEqualTo: title);    final snap = await query.get();    for (final doc in snap.docs) {      final data = doc.data() as Map<String, dynamic>;      final ts = data['scheduledAt'];      final dt = ts is Timestamp ? ts.toDate() : null;      if (scheduledAt == null || dt?.millisecondsSinceEpoch == scheduledAt.millisecondsSinceEpoch) {        await doc.reference.delete();        break;      }    }    lives.removeWhere((l) => l.title == title && (scheduledAt == null || l.scheduledAt?.millisecondsSinceEpoch == scheduledAt.millisecondsSinceEpoch));    notifyListeners();  }
+  Future<void> deletePoll(String pollId) async {
+    final pollRef = FirebaseFirestore.instance.collection('polls').doc(pollId);
+
+    final votesSnapshot = await pollRef.collection('votes').get();
+    final batch = FirebaseFirestore.instance.batch();
+
+    for (final voteDoc in votesSnapshot.docs) {
+      batch.delete(voteDoc.reference);
+    }
+
+    batch.delete(pollRef);
+    await batch.commit();
+
+    polls.removeWhere((poll) => poll.id == pollId);
+    notifyListeners();
+  }
+
   Future<void> addDonor(String name, int points) async { donors.add(Donor(name, points)); donors.sort((a,b) => b.points.compareTo(a.points)); notifyListeners(); await _save(); }
   Future<void> addChallenge(String title, String subtitle, int points) async { challenges.add(Challenge(title, subtitle, points)); notifyListeners(); await _save(); }
   Future<void> resetDemo() async { await prefs.clear(); notifyListeners(); }
@@ -407,40 +424,95 @@ class DonorsPage extends StatelessWidget {
 
 class CommunityPage extends StatelessWidget {
   final TwiixState state;
-  const CommunityPage({super.key, required this.state});
-  @override
-  Widget build(BuildContext context) => PageFrame(
-    title: 'Communauté',
-    children: [
-      const SectionTitle('Actualités'),
-      const SizedBox(height: 10),
-      ...state.news.map((n) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: FeedCard(title: n.title, body: n.body),
-      )),
-      const SizedBox(height: 18),
-      const SectionTitle('Sondages'),
-      const SizedBox(height: 10),
-      if (state.polls.isEmpty)
-        const Text('Aucun sondage pour le moment.', style: TextStyle(color: Colors.white60))
-      else
-        ...state.polls.map((p) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: PollCard(poll: p),
-        )),
-    ],
-  );
-}
 
+  const CommunityPage({
+    super.key,
+    required this.state,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final activePolls =
+        state.polls.where((poll) => !poll.isFinished).toList();
+
+    final finishedPolls =
+        state.polls.where((poll) => poll.isFinished).toList();
+
+    return PageFrame(
+      title: 'Communauté',
+      children: [
+        const SectionTitle('Sondages en cours'),
+        const SizedBox(height: 10),
+
+        if (activePolls.isEmpty)
+          const InfoCard(
+            icon: Icons.poll_outlined,
+            title: 'Aucun sondage en cours',
+            subtitle: 'Les prochains sondages apparaîtront ici.',
+          )
+        else
+          ...activePolls.map(
+            (poll) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: PollCard(poll: poll, state: state),
+            ),
+          ),
+
+        const SizedBox(height: 22),
+
+        const SectionTitle('Actualités'),
+        const SizedBox(height: 10),
+
+        if (state.news.isEmpty)
+          const Text(
+            'Aucune actualité pour le moment.',
+            style: TextStyle(color: Colors.white60),
+          )
+        else
+          ...state.news.map(
+            (news) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: FeedCard(
+                title: news.title,
+                body: news.body,
+              ),
+            ),
+          ),
+
+        if (finishedPolls.isNotEmpty) ...[
+          const SizedBox(height: 22),
+          const SectionTitle('Sondages terminés'),
+          const SizedBox(height: 10),
+
+          ...finishedPolls.map(
+            (poll) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: PollCard(poll: poll, state: state),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
 class PollCard extends StatefulWidget {
   final PollItem poll;
-  const PollCard({super.key, required this.poll});
+  final TwiixState state;
+  const PollCard({super.key, required this.poll, required this.state});
 
   @override
   State<PollCard> createState() => _PollCardState();
 }
 
 class _PollCardState extends State<PollCard> {
+  late final Future<bool> _canManageFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _canManageFuture = canManagePoll();
+  }
+
   Future<void> vote(int optionIndex) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || widget.poll.isFinished) return;
@@ -475,6 +547,71 @@ class _PollCardState extends State<PollCard> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Impossible d’enregistrer le vote.')),
+      );
+    }
+  }
+
+  Future<bool> canManagePoll() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null || user.isAnonymous) {
+      return false;
+    }
+
+    try {
+      final adminDoc = await FirebaseFirestore.instance
+          .collection('admins')
+          .doc(user.uid)
+          .get();
+
+      final data = adminDoc.data();
+      final active = data?['active'] == true;
+      final role = data?['role'];
+
+      return active && (role == 'owner' || role == 'twiix');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> confirmDeletePoll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Supprimer ce sondage ?'),
+        content: Text(
+          '${widget.poll.question}\n\nLes votes associés seront également supprimés.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await widget.state.deletePoll(widget.poll.id);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sondage supprimé.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de supprimer le sondage.'),
+        ),
       );
     }
   }
@@ -530,21 +667,38 @@ class _PollCardState extends State<PollCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.poll_outlined, color: pink),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      widget.poll.question,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
+                Row(
+                  children: [
+                    const Icon(Icons.poll_outlined, color: pink),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        widget.poll.question,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    FutureBuilder<bool>(
+                      future: _canManageFuture,
+                      builder: (context, adminSnapshot) {
+                        if (adminSnapshot.data != true) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return IconButton(
+                          tooltip: 'Supprimer le sondage',
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
+                          ),
+                          onPressed: confirmDeletePoll,
+                        );
+                      },
+                    ),
+                  ],
+                ),
               const SizedBox(height: 8),
               Text(
                 finished
@@ -1416,9 +1570,106 @@ class MiniAction extends StatelessWidget {
   );
 }
 class FeedCard extends StatelessWidget {
-  final String title; final String body;
-  const FeedCard({super.key, required this.title, required this.body});
-  @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(16), decoration: cardDecoration(), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Row(children: [CircleAvatar(radius: 16, backgroundImage: AssetImage('assets/images/logo_source.jpg')), SizedBox(width: 9), Text('Twiix Officiel', style: TextStyle(fontWeight: FontWeight.w800))]), const SizedBox(height: 12), Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)), const SizedBox(height: 5), Text(body, style: const TextStyle(color: Colors.white70))]));
+  final String title;
+  final String body;
+
+  const FeedCard({
+    super.key,
+    required this.title,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: cardDecoration(),
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 4,
+            color: pink,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 17,
+                        backgroundImage:
+                            AssetImage('assets/images/logo_source.jpg'),
+                      ),
+                      const SizedBox(width: 9),
+
+                      const Expanded(
+                        child: Text(
+                          'Twiix Officiel',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0x22FF2C7D),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'OFFICIEL',
+                          style: TextStyle(
+                            color: pink,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 13),
+
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      height: 1.2,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+
+                  const SizedBox(height: 7),
+
+                  Text(
+                    body,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 class ChallengeCard extends StatelessWidget {
   final String title; final String subtitle; final int points;
