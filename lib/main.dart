@@ -907,12 +907,11 @@ class _PollCardState extends State<PollCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Vote enregistré !'),
-                    Image.asset(
-                      'assets/images/badges/premier_vote.png',
-                      width: 140,
-                      height: 140,
-                      fit: BoxFit.contain,
-                    ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -969,11 +968,12 @@ class _PollCardState extends State<PollCard> {
                     ),
                   ),
                   SizedBox(height: 22),
-                  Icon(
-                    Icons.how_to_vote_rounded,
-                    size: 90,
-                    color: pink,
-                  ),
+                    Image.asset(
+                      'assets/images/badges/premier_vote.png',
+                      width: 140,
+                      height: 140,
+                      fit: BoxFit.contain,
+                    ),
                   SizedBox(height: 18),
                   Text(
                     'Premier vote',
