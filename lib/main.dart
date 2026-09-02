@@ -534,6 +534,8 @@ class _PollCardState extends State<PollCard> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || widget.poll.isFinished) return;
 
+    bool unlockedFirstVote = false;
+
     final voteRef = FirebaseFirestore.instance
         .collection('polls')
         .doc(widget.poll.id)
@@ -546,7 +548,9 @@ class _PollCardState extends State<PollCard> {
       if (existingVote.exists) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tu as déjà voté à ce sondage.')),
+          const SnackBar(
+            content: Text('Tu as déjà voté à ce sondage.'),
+          ),
         );
         return;
       }
@@ -556,37 +560,157 @@ class _PollCardState extends State<PollCard> {
         'votedAt': FieldValue.serverTimestamp(),
       });
 
-        if (!user.isAnonymous) {
-          try {
-            final badgeRef = FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .collection('badges')
-                .doc('first_vote');
+      if (!user.isAnonymous) {
+        try {
+          final badgeRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('badges')
+              .doc('first_vote');
 
-            final badgeSnapshot = await badgeRef.get();
+          final badgeSnapshot = await badgeRef.get();
 
-            if (!badgeSnapshot.exists) {
-              await badgeRef.set({
-                'id': 'first_vote',
-                'sourcePollId': widget.poll.id,
-                'unlockedAt': FieldValue.serverTimestamp(),
-              });
-            }
-          } catch (_) {}
+          if (!badgeSnapshot.exists) {
+            await badgeRef.set({
+              'id': 'first_vote',
+              'sourcePollId': widget.poll.id,
+              'unlockedAt': FieldValue.serverTimestamp(),
+            });
+
+            unlockedFirstVote = true;
+          }
+        } catch (_) {
+          // Le vote reste valide même si le badge ne peut pas être créé.
         }
-
+      }
 
       if (!mounted) return;
+
+      if (unlockedFirstVote) {
+        await showBadgeUnlockAnimation();
+      }
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vote enregistré !')),
+        const SnackBar(
+          content: Text('Vote enregistré !'),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d’enregistrer le vote.')),
+        const SnackBar(
+          content: Text('Impossible d’enregistrer le vote.'),
+        ),
       );
     }
+  }
+
+  Future<void> showBadgeUnlockAnimation() async {
+    if (!mounted) return;
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    final dialogFuture = showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'Badge débloqué',
+      barrierColor: Colors.black.withValues(alpha: 0.82),
+      transitionDuration: const Duration(milliseconds: 650),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Material(
+          color: Colors.transparent,
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.fromLTRB(26, 30, 26, 26),
+              decoration: BoxDecoration(
+                color: const Color(0xFF121218),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: pink.withValues(alpha: 0.8),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: pink.withValues(alpha: 0.30),
+                    blurRadius: 40,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'BADGE DÉBLOQUÉ',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: pink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  SizedBox(height: 22),
+                  Icon(
+                    Icons.how_to_vote_rounded,
+                    size: 90,
+                    color: pink,
+                  ),
+                  SizedBox(height: 18),
+                  Text(
+                    'Premier vote',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Tu viens de débloquer ton premier badge Twiix !',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curvedAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.elasticOut,
+          reverseCurve: Curves.easeIn,
+        );
+
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(
+              begin: 0.45,
+              end: 1,
+            ).animate(curvedAnimation),
+            child: child,
+          ),
+        );
+      },
+    );
+
+    await Future.delayed(const Duration(milliseconds: 2600));
+
+    if (mounted && navigator.canPop()) {
+      navigator.pop();
+    }
+
+    await dialogFuture;
   }
 
   Future<bool> canManagePoll() async {
