@@ -954,7 +954,7 @@ class _PollCardState extends State<PollCard> {
                   ),
                 ],
               ),
-              child: const Column(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
