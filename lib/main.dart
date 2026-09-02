@@ -358,7 +358,7 @@ class HomePage extends StatelessWidget {
       const SizedBox(height: 18),
       const SectionTitle('Le QG de la communauté'),
       Row(children: [
-        Expanded(child: MiniAction(icon: Icons.forum_outlined, title: 'Communauté', subtitle: 'Actus & sondages', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommunityPage(state: state))))),
+        Expanded(child: MiniAction(icon: Icons.forum_outlined, title: 'Communauté', subtitle: 'Actus & sondages', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(backgroundColor: const Color(0xFF07070B), body: CommunityPage(state: state)))))),
         const SizedBox(width: 10),
         Expanded(child: MiniAction(icon: Icons.military_tech_outlined, title: 'Classement', subtitle: 'Twiix Points', onTap: () => onNavigate(2))),
       ]),
@@ -366,7 +366,7 @@ class HomePage extends StatelessWidget {
       Row(children: [
         Expanded(child: MiniAction(icon: Icons.workspace_premium_outlined, title: 'Top donateurs', subtitle: 'Hall of Fame', onTap: () => onNavigate(3))),
         const SizedBox(width: 10),
-        Expanded(child: MiniAction(icon: Icons.card_giftcard_outlined, title: 'Badges', subtitle: 'Récompenses', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgesPage())))),
+        Expanded(child: MiniAction(icon: Icons.card_giftcard_outlined, title: 'Badges', subtitle: 'Récompenses', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Scaffold(backgroundColor: Color(0xFF07070B), body: BadgesPage()))))),
       ]),
       const SizedBox(height: 18),
       const SectionTitle('Dernières actus'),
