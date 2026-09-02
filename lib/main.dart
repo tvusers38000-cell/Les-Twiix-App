@@ -438,10 +438,27 @@ class CommunityPage extends StatelessWidget {
     final finishedPolls =
         state.polls.where((poll) => poll.isFinished).toList();
 
+    Widget sectionHeader(IconData icon, String text) {
+      return Row(
+        children: [
+          Icon(icon, color: pink, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      );
+    }
+
+
     return PageFrame(
       title: 'Communauté',
       children: [
-        const SectionTitle('Sondages en cours'),
+        sectionHeader(Icons.poll_outlined, 'Sondages en cours'),
         const SizedBox(height: 10),
 
         if (activePolls.isEmpty)
@@ -460,7 +477,7 @@ class CommunityPage extends StatelessWidget {
 
         const SizedBox(height: 22),
 
-        const SectionTitle('Actualités'),
+        sectionHeader(Icons.campaign_outlined, 'Actualités'),
         const SizedBox(height: 10),
 
         if (state.news.isEmpty)
@@ -481,7 +498,7 @@ class CommunityPage extends StatelessWidget {
 
         if (finishedPolls.isNotEmpty) ...[
           const SizedBox(height: 22),
-          const SectionTitle('Sondages terminés'),
+          sectionHeader(Icons.history_rounded, 'Sondages terminés'),
           const SizedBox(height: 10),
 
           ...finishedPolls.map(
@@ -668,16 +685,50 @@ class _PollCardState extends State<PollCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.poll_outlined, color: pink),
-                    const SizedBox(width: 10),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0x22FF2C7D),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.poll_outlined,
+                        color: pink,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        widget.poll.question,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.poll.question,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              height: 1.2,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            finished
+                                ? 'Sondage terminé'
+                                : hasVoted
+                                    ? 'Vote enregistré • Fin : $endText'
+                                    : 'Fin : $endText',
+                            style: TextStyle(
+                              color: finished
+                                  ? Colors.white38
+                                  : Colors.white54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     FutureBuilder<bool>(
@@ -689,29 +740,19 @@ class _PollCardState extends State<PollCard> {
 
                         return IconButton(
                           tooltip: 'Supprimer le sondage',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: confirmDeletePoll,
                           icon: const Icon(
                             Icons.delete_outline,
-                            color: Colors.redAccent,
+                            color: Colors.white38,
+                            size: 21,
                           ),
-                          onPressed: confirmDeletePoll,
                         );
                       },
                     ),
                   ],
                 ),
-              const SizedBox(height: 8),
-              Text(
-                finished
-                    ? 'Sondage terminé'
-                    : hasVoted
-                        ? 'Vote enregistré • Fin : $endText'
-                        : 'Fin : $endText',
-                style: TextStyle(
-                  color: finished ? Colors.white54 : Colors.white70,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
               ...List.generate(widget.poll.options.length, (i) {
                 final votes = voteCounts[i];
@@ -722,102 +763,108 @@ class _PollCardState extends State<PollCard> {
                   if (showResults) {
                     final isMyVote = myVote == i;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF17171F),
-                          borderRadius: BorderRadius.circular(14),
-                          border: isMyVote
-                              ? Border.all(color: pink, width: 1.4)
-                              : Border.all(color: Colors.white10),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    widget.poll.options[i],
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  '$percent%',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                    color: pink,
-                                  ),
-                                ),
-                              ],
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF15151C),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isMyVote
+                                  ? pink
+                                  : Colors.white.withValues(alpha: 0.08),
+                              width: isMyVote ? 1.3 : 1,
                             ),
-                            if (isMyVote) ...[
-                              const SizedBox(height: 5),
-                              const Row(
-                                children: [
-                                  Icon(
-                                    Icons.check_circle,
-                                    size: 15,
-                                    color: pink,
-                                  ),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    'Ton vote',
-                                    style: TextStyle(
-                                      color: pink,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.poll.options[i],
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    if (isMyVote) ...[
+                                      const SizedBox(height: 5),
+                                      const Row(
+                                        children: [
+                                          Icon(
+                                            Icons.check_circle,
+                                            size: 14,
+                                            color: pink,
+                                          ),
+                                          SizedBox(width: 5),
+                                          Text(
+                                            'Ton vote',
+                                            style: TextStyle(
+                                              color: pink,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                '$percent%',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  color: isMyVote ? pink : Colors.white,
+                                ),
                               ),
                             ],
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: LinearProgressIndicator(
-                                value: totalVotes == 0
-                                    ? 0
-                                    : votes / totalVotes,
-                                minHeight: 6,
-                                backgroundColor: Colors.white10,
-                                color: pink,
-                              ),
-                            ),
-                          ],
+                          ),
+                        ),
+                      );
+                    }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: OutlinedButton(
+                      onPressed: () => vote(i),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        alignment: Alignment.centerLeft,
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.10),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                    );
-                  }
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: OutlinedButton(
-                    onPressed: () => vote(i),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        widget.poll.options[i],
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                    child: Text(widget.poll.options[i]),
-                  ),
-                );
-              }),
+                  );
+                }),
 
-              if (showResults)
-                Text(
-                  '$totalVotes vote${totalVotes > 1 ? 's' : ''}',
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
+                if (showResults)
+                  Text(
+                    '$totalVotes vote${totalVotes > 1 ? 's' : ''}',
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
             ],
           ),
         );
@@ -1583,87 +1630,85 @@ class FeedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: cardDecoration(),
-      clipBehavior: Clip.antiAlias,
-      child: Row(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121218),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 4,
-            color: pink,
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 17,
-                        backgroundImage:
-                            AssetImage('assets/images/logo_source.jpg'),
-                      ),
-                      const SizedBox(width: 9),
-
-                      const Expanded(
-                        child: Text(
-                          'Twiix Officiel',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0x22FF2C7D),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'OFFICIEL',
-                          style: TextStyle(
-                            color: pink,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 13),
-
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      height: 1.2,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-
-                  const SizedBox(height: 7),
-
-                  Text(
-                    body,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      height: 1.45,
-                    ),
-                  ),
-                ],
+          Row(
+            children: [
+              const CircleAvatar(
+                radius: 18,
+                backgroundImage:
+                    AssetImage('assets/images/logo_source.jpg'),
               ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Twiix Officiel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 5),
+                    Icon(
+                      Icons.verified,
+                      color: pink,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0x22FF2C7D),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'OFFICIEL',
+                  style: TextStyle(
+                    color: pink,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              height: 1.25,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            body,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+              height: 1.5,
             ),
           ),
         ],
