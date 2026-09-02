@@ -897,17 +897,220 @@ class _PollCardState extends State<PollCard> {
 
 class BadgesPage extends StatelessWidget {
   const BadgesPage({super.key});
-  @override
-  Widget build(BuildContext context) => PageFrame(
-    title: 'Badges & Récompenses',
-    children: const [
-      InfoCard(
-        icon: Icons.card_giftcard_outlined,
-        title: 'Badges Twiix',
-        subtitle: 'Les récompenses et badges de la communauté seront disponibles ici.',
+
+  static const badges = [
+    {
+      'id': 'first_vote',
+      'title': 'Premier vote',
+      'description': 'Tu as participé à ton premier sondage Twiix.',
+      'howTo': 'Participe à ton premier sondage de la communauté.',
+      'icon': Icons.how_to_vote_rounded,
+    },
+    {
+      'id': 'polls_10',
+      'title': 'Habitué des sondages',
+      'description': 'Tu participes régulièrement aux sondages Twiix.',
+      'howTo': 'Participe à 10 sondages différents.',
+      'icon': Icons.poll_rounded,
+    },
+    {
+      'id': 'first_challenge',
+      'title': 'Premier défi',
+      'description': 'Tu as relevé ton premier défi Twiix.',
+      'howTo': 'Participe à ton premier défi.',
+      'icon': Icons.sports_esports_rounded,
+    },
+    {
+      'id': 'challenges_10',
+      'title': 'Compétiteur',
+      'description': 'Les défis Twiix n’ont presque plus de secret pour toi.',
+      'howTo': 'Participe à 10 défis différents.',
+      'icon': Icons.emoji_events_rounded,
+    },
+    {
+      'id': 'first_event',
+      'title': 'Présent au rendez-vous',
+      'description': 'Tu as participé à ton premier événement Twiix.',
+      'howTo': 'Participe à ton premier événement Twiix.',
+      'icon': Icons.event_available_rounded,
+    },
+    {
+      'id': 'twiix_supporter',
+      'title': 'Supporter Twiix',
+      'description': 'Tu fais partie des membres fidèles de la communauté.',
+      'howTo': 'Condition spéciale à découvrir prochainement.',
+      'icon': Icons.shield_rounded,
+    },
+  ];
+
+  void showBadgeDetails(
+    BuildContext context,
+    Map<String, Object> badge,
+    bool unlocked,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF121218),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
       ),
-    ],
-  );
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              badge['icon'] as IconData,
+              size: 72,
+              color: unlocked ? pink : Colors.white38,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              badge['title'] as String,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              badge['description'] as String,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              unlocked ? 'Débloqué' : 'Comment le débloquer',
+              style: TextStyle(
+                color: unlocked ? pink : Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              badge['howTo'] as String,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white60,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    return PageFrame(
+      title: 'Badges & Récompenses',
+      children: [
+        if (user == null)
+          const InfoCard(
+            icon: Icons.lock_outline,
+            title: 'Connexion requise',
+            subtitle: 'Connecte-toi pour voir ta collection de badges.',
+          )
+        else
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('badges')
+                .snapshots(),
+            builder: (context, snapshot) {
+              final unlockedIds =
+                  snapshot.data?.docs.map((doc) => doc.id).toSet() ?? <String>{};
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: badges.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.92,
+                ),
+                itemBuilder: (context, index) {
+                  final badge = badges[index];
+                  final unlocked =
+                      unlockedIds.contains(badge['id'] as String);
+
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => showBadgeDetails(
+                      context,
+                      badge,
+                      unlocked,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF121218),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: unlocked
+                              ? pink.withValues(alpha: 0.5)
+                              : Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      child: Opacity(
+                        opacity: unlocked ? 1 : 0.42,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Icon(
+                                  badge['icon'] as IconData,
+                                  size: 56,
+                                  color: unlocked ? pink : Colors.white70,
+                                ),
+                                if (!unlocked)
+                                  const Positioned(
+                                    right: -8,
+                                    bottom: -5,
+                                    child: Icon(
+                                      Icons.lock_rounded,
+                                      size: 22,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              badge['title'] as String,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+      ],
+    );
+  }
 }
 
 
