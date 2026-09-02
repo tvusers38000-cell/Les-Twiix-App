@@ -39,7 +39,7 @@ class TwiixApp extends StatelessWidget {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
         ),
       ),
-      home: Shell(state: state),
+      home: TwiixIntro(state: state),
     );
   }
 }
@@ -288,6 +288,258 @@ Future<void> deleteLive(String title, DateTime? scheduledAt) async {    Query qu
   Future<void> resetDemo() async { await prefs.clear(); notifyListeners(); }
 }
 
+class TwiixIntro extends StatefulWidget {
+  final TwiixState state;
+
+  const TwiixIntro({super.key, required this.state});
+
+  @override
+  State<TwiixIntro> createState() => _TwiixIntroState();
+}
+
+class _TwiixIntroState extends State<TwiixIntro>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  int _step = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
+
+    _playIntro();
+  }
+
+  Future<void> _playIntro() async {
+    await Future.delayed(const Duration(milliseconds: 250));
+
+    for (int step = 0; step < 3; step++) {
+      if (!mounted) return;
+
+      setState(() => _step = step);
+      _controller
+        ..reset()
+        ..forward();
+
+      await Future.delayed(
+        Duration(milliseconds: step == 2 ? 850 : 650),
+      );
+    }
+
+    if (!mounted) return;
+
+    setState(() => _step = 3);
+    _controller
+      ..reset()
+      ..forward();
+
+    await Future.delayed(const Duration(milliseconds: 1100));
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 500),
+        pageBuilder: (_, animation, secondaryAnimation) =>
+            Shell(state: widget.state),
+        transitionsBuilder: (_, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _counterText(String text) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final progress = Curves.elasticOut.transform(_controller.value);
+
+        return Opacity(
+          opacity: _controller.value.clamp(0.0, 1.0),
+          child: Transform.scale(
+            scale: 0.35 + (0.65 * progress),
+            child: child,
+          ),
+        );
+      },
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: text == 'ZIN !' ? 78 : 110,
+          height: 1,
+          fontWeight: FontWeight.w900,
+          fontStyle: FontStyle.italic,
+          letterSpacing: text == 'ZIN !' ? 3 : 0,
+          color: _step == 0 ? blue : pink,
+          shadows: [
+            Shadow(
+              color: (_step == 0 ? blue : pink).withValues(alpha: 0.9),
+              blurRadius: 25,
+            ),
+            Shadow(
+              color: (_step == 0 ? blue : pink).withValues(alpha: 0.5),
+              blurRadius: 55,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _logoReveal() {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final progress = Curves.easeOutBack.transform(_controller.value);
+
+        return Opacity(
+          opacity: _controller.value.clamp(0.0, 1.0),
+          child: Transform.scale(
+            scale: 0.55 + (0.45 * progress),
+            child: child,
+          ),
+        );
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 190,
+            height: 190,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: pink.withValues(alpha: 0.35),
+                  blurRadius: 55,
+                  spreadRadius: 8,
+                ),
+                BoxShadow(
+                  color: blue.withValues(alpha: 0.25),
+                  blurRadius: 80,
+                  spreadRadius: 10,
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/logo_source.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
+          const Text(
+            'Trois, deux, Zin !',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              fontStyle: FontStyle.italic,
+              letterSpacing: 1,
+              shadows: [
+                Shadow(
+                  color: pink,
+                  blurRadius: 20,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String counter = '3';
+
+    if (_step == 1) {
+      counter = '2';
+    } else if (_step == 2) {
+      counter = 'ZIN !';
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF050508),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 0.9,
+                  colors: [
+                    (_step == 0 ? blue : pink).withValues(alpha: 0.16),
+                    const Color(0xFF050508),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: blue.withValues(alpha: 0.20),
+                    blurRadius: 100,
+                    spreadRadius: 35,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            right: -100,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: pink.withValues(alpha: 0.20),
+                    blurRadius: 100,
+                    spreadRadius: 35,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Center(
+            child: _step < 3
+                ? _counterText(counter)
+                : _logoReveal(),
+          ),
+        ],
+      ),
+    );
+  }
+}
 class Shell extends StatefulWidget {
   final TwiixState state;
   const Shell({super.key, required this.state});
