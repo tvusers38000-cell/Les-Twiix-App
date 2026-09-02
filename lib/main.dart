@@ -907,11 +907,12 @@ class _PollCardState extends State<PollCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Vote enregistré !'),
-          ),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
+                    Image.asset(
+                      'assets/images/badges/premier_vote.png',
+                      width: 140,
+                      height: 140,
+                      fit: BoxFit.contain,
+                    ),
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
