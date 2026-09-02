@@ -1950,7 +1950,7 @@ class ProfilePage extends StatelessWidget {
           return PageFrame(
             title: 'Mon profil',
             children: [
-              const Center(
+              Center(
                 child: Column(
                   children: [
                     Container(
