@@ -531,35 +531,206 @@ class BadgesPage extends StatelessWidget {
 class ProfilePage extends StatelessWidget {
   final TwiixState state;
   const ProfilePage({super.key, required this.state});
-  @override Widget build(BuildContext context) => PageFrame(title: 'Profil', children: [
-    const Center(child: Column(children: [CircleAvatar(radius: 54, backgroundImage: AssetImage('assets/images/logo_source.jpg')), SizedBox(height: 12), Text('Membre Twiix', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)), Text('Prototype connecté localement', style: TextStyle(color: Colors.white60))])),
-    const SizedBox(height: 18),
-    if (FirebaseAuth.instance.currentUser?.isAnonymous ?? true)
-      FilledButton.icon(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MemberSignupPage()),
-        ),
-        icon: const Icon(Icons.person_add),
-        label: const Text('Créer mon compte Twiix'),
-      ),
-    if (FirebaseAuth.instance.currentUser?.isAnonymous ?? true)
-      const SizedBox(height: 10),
-    if (FirebaseAuth.instance.currentUser?.isAnonymous ?? true)
-      OutlinedButton.icon(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MemberLoginPage()),
-        ),
-        icon: const Icon(Icons.login),
-        label: const Text('Se connecter à mon compte Twiix'),
-      ),
-    if (FirebaseAuth.instance.currentUser?.isAnonymous ?? true)
-      const SizedBox(height: 10),
-    FilledButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminLoginPage(state: state))), icon: const Icon(Icons.admin_panel_settings), label: const Text('Ouvrir l’espace Admin (démo)')),
-    const SizedBox(height: 10), const InfoCard(icon: Icons.notifications_active_outlined, title: 'Notifications', subtitle: 'Lives, annonces importantes et résultats des défis — connexion push à venir.'),
-    const SizedBox(height: 10), const InfoCard(icon: Icons.verified_user_outlined, title: 'Sécurité & modération', subtitle: 'Comptes, signalement, blocage et rôles sécurisés arriveront avec le backend.'),
-  ]);
+
+  Future<void> logout() async {
+    await FirebaseAuth.instance.signOut();
+    await FirebaseAuth.instance.signInAnonymously();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, authSnapshot) {
+        final user = authSnapshot.data ?? FirebaseAuth.instance.currentUser;
+        final isMember = user != null && !user.isAnonymous;
+
+        if (!isMember) {
+          return PageFrame(
+            title: 'Mon profil',
+            children: [
+              const Center(
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 54,
+                      backgroundImage: AssetImage('assets/images/logo_source.jpg'),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'Membre Twiix',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                    ),
+                    Text(
+                      'Crée ton compte pour débloquer ton profil',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white60),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MemberSignupPage()),
+                ),
+                icon: const Icon(Icons.person_add),
+                label: const Text('Créer mon compte Twiix'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MemberLoginPage()),
+                ),
+                icon: const Icon(Icons.login),
+                label: const Text('Se connecter à mon compte Twiix'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => AdminLoginPage(state: state)),
+                ),
+                icon: const Icon(Icons.admin_panel_settings),
+                label: const Text('Accès Admin / Twiix'),
+              ),
+            ],
+          );
+        }
+
+        return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .snapshots(),
+          builder: (context, profileSnapshot) {
+            final data = profileSnapshot.data?.data() ?? <String, dynamic>{};
+            final pseudo = (data['pseudo'] as String?)?.trim();
+            final displayPseudo = pseudo != null && pseudo.isNotEmpty
+                ? pseudo
+                : (user.displayName ?? 'Membre Twiix');
+            final points = (data['twiixPoints'] as num?)?.toInt() ?? 0;
+            final featuredBadge = data['featuredBadgeId'] as String?;
+
+            return PageFrame(
+              title: 'Mon profil',
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      const CircleAvatar(
+                        radius: 58,
+                        backgroundImage: AssetImage('assets/images/logo_source.jpg'),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        displayPseudo,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        user.email ?? '',
+                        style: const TextStyle(color: Colors.white60),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: cardDecoration(),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.stars_rounded, color: pink, size: 34),
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Twiix Points',
+                            style: TextStyle(color: Colors.white60),
+                          ),
+                          Text(
+                            '$points',
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const SectionTitle('Mes badges'),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: cardDecoration(),
+                  child: featuredBadge == null
+                      ? const Column(
+                          children: [
+                            Icon(Icons.workspace_premium_outlined, size: 42, color: pink),
+                            SizedBox(height: 10),
+                            Text(
+                              'Aucun badge débloqué pour le moment',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Participe aux sondages, défis et événements pour gagner des badges.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white60),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            const Icon(Icons.workspace_premium, color: pink, size: 38),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                featuredBadge,
+                                style: const TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 18),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => AdminLoginPage(state: state)),
+                  ),
+                  icon: const Icon(Icons.admin_panel_settings),
+                  label: const Text('Accès Admin / Twiix'),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await logout();
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Se déconnecter'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 class MemberLoginPage extends StatefulWidget {
@@ -598,6 +769,32 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
     }
   }
 
+  Future<void> forgotPassword() async {
+    final email = emailController.text.trim();
+
+    if (email.isEmpty) {
+      setState(() => error = 'Entre ton adresse e-mail pour réinitialiser ton mot de passe.');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('E-mail de réinitialisation envoyé.')),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        if (e.code == 'invalid-email') {
+          error = 'Adresse e-mail invalide.';
+        } else {
+          error = e.message ?? 'Impossible d’envoyer l’e-mail de réinitialisation.';
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Connexion membre')),
@@ -615,6 +812,14 @@ class _MemberLoginPageState extends State<MemberLoginPage> {
             controller: passwordController,
             obscureText: true,
             decoration: const InputDecoration(labelText: 'Mot de passe'),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: forgotPassword,
+              child: const Text('Mot de passe oublié ?'),
+            ),
+          ),
           ),
           const SizedBox(height: 18),
           if (error != null)
@@ -731,6 +936,7 @@ class _MemberSignupPageState extends State<MemberSignupPage> {
             controller: passwordController,
             obscureText: true,
             decoration: const InputDecoration(labelText: 'Mot de passe'),
+          ),
           ),
           const SizedBox(height: 18),
           if (error != null)
