@@ -438,7 +438,7 @@ class _TwiixIntroState extends State<TwiixIntro>
             ),
             child: ClipOval(
               child: Image.asset(
-                'assets/images/logo_source.jpg',
+                'assets/images/twiix_profile_logo.png',
                 fit: BoxFit.cover,
               ),
             ),
@@ -582,7 +582,7 @@ class PageFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CustomScrollView(slivers: [
     SliverAppBar(pinned: true, backgroundColor: const Color(0xFF07070B), title: Row(children: [
-      const CircleAvatar(radius: 17, backgroundImage: AssetImage('assets/images/logo_source.jpg')),
+      const CircleAvatar(radius: 17, backgroundImage: AssetImage('assets/images/twiix_profile_logo.png')),
       const SizedBox(width: 10), Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
     ])),
     SliverPadding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 28), sliver: SliverList(delegate: SliverChildListDelegate(children))),
@@ -1963,7 +1963,7 @@ class ProfilePage extends StatelessWidget {
                       padding: EdgeInsets.all(6),
                       child: ClipOval(
                         child: Image.asset(
-                          'assets/images/logo_source.jpg',
+                          'assets/images/twiix_profile_logo.png',
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -2038,7 +2038,7 @@ class ProfilePage extends StatelessWidget {
                         padding: EdgeInsets.all(6),
                         child: ClipOval(
                           child: Image.asset(
-                            'assets/images/logo_source.jpg',
+                            'assets/images/twiix_profile_logo.png',
                             fit: BoxFit.contain,
                           ),
                         ),
@@ -2696,7 +2696,7 @@ class FeedCard extends StatelessWidget {
               const CircleAvatar(
                 radius: 18,
                 backgroundImage:
-                    AssetImage('assets/images/logo_source.jpg'),
+                    AssetImage('assets/images/twiix_profile_logo.png'),
               ),
               const SizedBox(width: 10),
               const Expanded(
@@ -2774,7 +2774,7 @@ class ChallengeCard extends StatelessWidget {
 class DonorTile extends StatelessWidget {
   final int rank; final Donor donor;
   const DonorTile({super.key, required this.rank, required this.donor});
-  @override Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(bottom: 9), padding: const EdgeInsets.all(14), decoration: cardDecoration(), child: Row(children: [SizedBox(width: 34, child: Text('$rank', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: rank <= 3 ? const Color(0xFFFFD34E) : Colors.white70))), const CircleAvatar(radius: 19, backgroundImage: AssetImage('assets/images/logo_source.jpg')), const SizedBox(width: 11), Expanded(child: Text(donor.name, style: const TextStyle(fontWeight: FontWeight.w800))), Text('${donor.points} pts', style: const TextStyle(color: pink, fontWeight: FontWeight.w800))]));
+  @override Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(bottom: 9), padding: const EdgeInsets.all(14), decoration: cardDecoration(), child: Row(children: [SizedBox(width: 34, child: Text('$rank', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: rank <= 3 ? const Color(0xFFFFD34E) : Colors.white70))), const CircleAvatar(radius: 19, backgroundImage: AssetImage('assets/images/twiix_profile_logo.png')), const SizedBox(width: 11), Expanded(child: Text(donor.name, style: const TextStyle(fontWeight: FontWeight.w800))), Text('${donor.points} pts', style: const TextStyle(color: pink, fontWeight: FontWeight.w800))]));
 }
 
 BoxDecoration cardDecoration() => BoxDecoration(color: const Color(0xFF111117), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0x22FFFFFF)));
