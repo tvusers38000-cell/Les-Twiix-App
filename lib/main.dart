@@ -556,6 +556,27 @@ class _PollCardState extends State<PollCard> {
         'votedAt': FieldValue.serverTimestamp(),
       });
 
+        if (!user.isAnonymous) {
+          try {
+            final badgeRef = FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .collection('badges')
+                .doc('first_vote');
+
+            final badgeSnapshot = await badgeRef.get();
+
+            if (!badgeSnapshot.exists) {
+              await badgeRef.set({
+                'id': 'first_vote',
+                'sourcePollId': widget.poll.id,
+                'unlockedAt': FieldValue.serverTimestamp(),
+              });
+            }
+          } catch (_) {}
+        }
+
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vote enregistré !')),
@@ -1083,41 +1104,83 @@ class ProfilePage extends StatelessWidget {
                 const SizedBox(height: 18),
                 const SectionTitle('Mes badges'),
                 const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: cardDecoration(),
-                  child: featuredBadge == null
-                      ? const Column(
-                          children: [
-                            Icon(Icons.workspace_premium_outlined, size: 42, color: pink),
-                            SizedBox(height: 10),
-                            Text(
-                              'Aucun badge débloqué pour le moment',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Participe aux sondages, défis et événements pour gagner des badges.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.white60),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            const Icon(Icons.workspace_premium, color: pink, size: 38),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                featuredBadge,
-                                style: const TextStyle(fontWeight: FontWeight.w800),
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .collection('badges')
+                        .snapshots(),
+                    builder: (context, badgesSnapshot) {
+                      final badgeDocs = badgesSnapshot.data?.docs ?? [];
+                      final hasFirstVote = badgeDocs.any(
+                        (doc) => doc.id == 'first_vote',
+                      );
+
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: cardDecoration(),
+                        child: hasFirstVote
+                            ? Row(
+                                children: [
+                                  const Icon(
+                                    Icons.how_to_vote_rounded,
+                                    color: pink,
+                                    size: 40,
+                                  ),
+                                  const SizedBox(width: 14),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Premier vote',
+                                          style: TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          'Tu as participé à ton premier sondage Twiix.',
+                                          style: TextStyle(
+                                            color: Colors.white60,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const Column(
+                                children: [
+                                  Icon(
+                                    Icons.workspace_premium_outlined,
+                                    size: 42,
+                                    color: pink,
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Aucun badge débloqué pour le moment',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Participe aux sondages, défis et événements pour gagner des badges.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.white60,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                ),
+                      );
+                    },
+                  ),
                 const SizedBox(height: 18),
                 OutlinedButton.icon(
                     onPressed: () => openAdmin(context),
