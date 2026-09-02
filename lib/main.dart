@@ -432,81 +432,198 @@ class CommunityPage extends StatelessWidget {
   );
 }
 
-class PollCard extends StatelessWidget {
+class PollCard extends StatefulWidget {
   final PollItem poll;
   const PollCard({super.key, required this.poll});
 
   @override
-  Widget build(BuildContext context) {
-    final finished = poll.isFinished;
-    final end = poll.endAt;
-    final endText = '${end.day.toString().padLeft(2, '0')}/${end.month.toString().padLeft(2, '0')}/${end.year} à ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
+  State<PollCard> createState() => _PollCardState();
+}
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: cardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+class _PollCardState extends State<PollCard> {
+  Future<void> vote(int optionIndex) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || widget.poll.isFinished) return;
+
+    final voteRef = FirebaseFirestore.instance
+        .collection('polls')
+        .doc(widget.poll.id)
+        .collection('votes')
+        .doc(user.uid);
+
+    try {
+      final existingVote = await voteRef.get();
+
+      if (existingVote.exists) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tu as déjà voté à ce sondage.')),
+        );
+        return;
+      }
+
+      await voteRef.set({
+        'optionIndex': optionIndex,
+        'votedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vote enregistré !')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d’enregistrer le vote.')),
+      );
+    }
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> get votesStream {
+    return FirebaseFirestore.instance
+        .collection('polls')
+        .doc(widget.poll.id)
+        .collection('votes')
+        .snapshots();
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    final finished = widget.poll.isFinished;
+    final end = widget.poll.endAt;
+    final endText =
+        '${end.day.toString().padLeft(2, '0')}/${end.month.toString().padLeft(2, '0')}/${end.year} à ${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: votesStream,
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? [];
+        final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
+        final voteCounts = List<int>.filled(widget.poll.options.length, 0);
+        int? myVote;
+
+        for (final doc in docs) {
+          final optionIndex = doc.data()['optionIndex'];
+
+          if (optionIndex is int &&
+              optionIndex >= 0 &&
+              optionIndex < voteCounts.length) {
+            voteCounts[optionIndex]++;
+
+            if (doc.id == currentUid) {
+              myVote = optionIndex;
+            }
+          }
+        }
+
+        final totalVotes =
+            voteCounts.fold<int>(0, (total, value) => total + value);
+
+        final hasVoted = myVote != null;
+        final showResults = finished || hasVoted;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: cardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.poll_outlined, color: pink),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  poll.question,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              Row(
+                children: [
+                  const Icon(Icons.poll_outlined, color: pink),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.poll.question,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                finished
+                    ? 'Sondage terminé'
+                    : hasVoted
+                        ? 'Vote enregistré • Fin : $endText'
+                        : 'Fin : $endText',
+                style: TextStyle(
+                  color: finished ? Colors.white54 : Colors.white70,
+                  fontSize: 12,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            finished ? 'Sondage terminé' : 'Fin : $endText',
-            style: TextStyle(
-              color: finished ? Colors.white54 : Colors.white70,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...List.generate(poll.options.length, (i) {
-            final votes = i < poll.votes.length ? poll.votes[i] : 0;
-            final percent = poll.totalVotes == 0 ? 0 : ((votes / poll.totalVotes) * 100).round();
+              const SizedBox(height: 14),
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: finished
-                  ? Container(
+              ...List.generate(widget.poll.options.length, (i) {
+                final votes = voteCounts[i];
+                final percent = totalVotes == 0
+                    ? 0
+                    : ((votes / totalVotes) * 100).round();
+
+                if (showResults) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: const Color(0xFF17171F),
                         borderRadius: BorderRadius.circular(14),
+                        border: myVote == i
+                            ? Border.all(color: pink, width: 1.5)
+                            : null,
                       ),
                       child: Row(
                         children: [
-                          Expanded(child: Text(poll.options[i])),
-                          Text('$percent%', style: const TextStyle(fontWeight: FontWeight.w800)),
+                          Expanded(
+                            child: Text(
+                              myVote == i
+                                  ? '${widget.poll.options[i]}  ✓'
+                                  : widget.poll.options[i],
+                            ),
+                          ),
+                          Text(
+                            '$percent%',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ],
                       ),
-                    )
-                  : OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
-                        alignment: Alignment.centerLeft,
-                      ),
-                      child: Text(poll.options[i]),
                     ),
-            );
-          }),
-          if (finished)
-            Text(
-              '${poll.totalVotes} vote${poll.totalVotes > 1 ? 's' : ''}',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-        ],
-      ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: OutlinedButton(
+                    onPressed: () => vote(i),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      alignment: Alignment.centerLeft,
+                    ),
+                    child: Text(widget.poll.options[i]),
+                  ),
+                );
+              }),
+
+              if (showResults)
+                Text(
+                  '$totalVotes vote${totalVotes > 1 ? 's' : ''}',
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 12,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
