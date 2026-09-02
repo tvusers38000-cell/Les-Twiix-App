@@ -592,44 +592,193 @@ class PageFrame extends StatelessWidget {
 class HomePage extends StatelessWidget {
   final TwiixState state;
   final ValueChanged<int> onNavigate;
-  const HomePage({super.key, required this.state, required this.onNavigate});
-  @override
-  Widget build(BuildContext context) => PageFrame(
-    title: 'LES TWIIX',
-    children: [
-      HeroCard(isLive: state.isLive),
-      const SizedBox(height: 16),
-      const SectionTitle('Prochain live'),
-      if (state.lives.isNotEmpty)
-        InfoCard(
-          icon: Icons.schedule,
-          title: '${state.lives.first.day} • ${state.lives.first.time}',
-          subtitle: state.lives.first.title,
-          trailing: 'Me rappeler',
-        ),
-      const SizedBox(height: 18),
-      const SectionTitle('Le QG de la communauté'),
-      Row(children: [
-        Expanded(child: MiniAction(icon: Icons.forum_outlined, title: 'Communauté', subtitle: 'Actus & sondages', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(backgroundColor: const Color(0xFF07070B), body: CommunityPage(state: state)))))),
-        const SizedBox(width: 10),
-        Expanded(child: MiniAction(icon: Icons.military_tech_outlined, title: 'Classement', subtitle: 'Twiix Points', onTap: () => onNavigate(2))),
-      ]),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: MiniAction(icon: Icons.workspace_premium_outlined, title: 'Top donateurs', subtitle: 'Hall of Fame', onTap: () => onNavigate(3))),
-        const SizedBox(width: 10),
-        Expanded(child: MiniAction(icon: Icons.card_giftcard_outlined, title: 'Badges', subtitle: 'Récompenses', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Scaffold(backgroundColor: Color(0xFF07070B), body: BadgesPage()))))),
-      ]),
-      const SizedBox(height: 18),
-      const SectionTitle('Dernières actus'),
-      ...state.news.take(5).map((n) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: FeedCard(title: n.title, body: n.body),
-      )),
-    ],
-  );
-}
 
+  const HomePage({
+    super.key,
+    required this.state,
+    required this.onNavigate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final activePolls =
+        state.polls.where((poll) => !poll.isFinished).toList();
+
+    final latestPoll =
+        activePolls.isEmpty ? null : activePolls.first;
+
+    void openCommunity() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            backgroundColor: const Color(0xFF07070B),
+            body: CommunityPage(state: state),
+          ),
+        ),
+      );
+    }
+
+    return PageFrame(
+      title: 'LES TWIIX',
+      children: [
+        HeroCard(isLive: state.isLive),
+        const SizedBox(height: 16),
+
+        const SectionTitle('Prochain live'),
+        if (state.lives.isNotEmpty)
+          InfoCard(
+            icon: Icons.schedule,
+            title:
+                '${state.lives.first.day} • ${state.lives.first.time}',
+            subtitle: state.lives.first.title,
+            trailing: 'Me rappeler',
+          ),
+
+        if (latestPoll != null) ...[
+          const SizedBox(height: 18),
+          const SectionTitle('Sondage en cours'),
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: openCommunity,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: cardDecoration(),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: pink.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.poll_rounded,
+                      color: pink,
+                      size: 27,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'NOUVEAU SONDAGE',
+                          style: TextStyle(
+                            color: pink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          latestPoll.question,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          '${latestPoll.options.length} choix • Appuie pour participer',
+                          style: const TextStyle(
+                            color: Colors.white60,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: pink,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 18),
+        const SectionTitle('Le QG de la communauté'),
+
+        Row(
+          children: [
+            Expanded(
+              child: MiniAction(
+                icon: Icons.forum_outlined,
+                title: 'Communauté',
+                subtitle: 'Actus & sondages',
+                onTap: openCommunity,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: MiniAction(
+                icon: Icons.military_tech_outlined,
+                title: 'Classement',
+                subtitle: 'Twiix Points',
+                onTap: () => onNavigate(2),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            Expanded(
+              child: MiniAction(
+                icon: Icons.workspace_premium_outlined,
+                title: 'Top donateurs',
+                subtitle: 'Hall of Fame',
+                onTap: () => onNavigate(3),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: MiniAction(
+                icon: Icons.card_giftcard_outlined,
+                title: 'Badges',
+                subtitle: 'Récompenses',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const Scaffold(
+                      backgroundColor: Color(0xFF07070B),
+                      body: BadgesPage(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 18),
+        const SectionTitle('Dernières actus'),
+
+        ...state.news.take(5).map(
+          (news) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: FeedCard(
+              title: news.title,
+              body: news.body,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 class HeroCard extends StatelessWidget {
   final bool isLive;
   const HeroCard({super.key, required this.isLive});
@@ -1804,9 +1953,20 @@ class ProfilePage extends StatelessWidget {
               const Center(
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 54,
-                      backgroundImage: AssetImage('assets/images/logo_source.jpg'),
+                    Container(
+                      width: 108,
+                      height: 108,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF0D0D12),
+                      ),
+                      padding: EdgeInsets.all(6),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/logo_source.jpg',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
                     SizedBox(height: 12),
                     Text(
@@ -1868,9 +2028,20 @@ class ProfilePage extends StatelessWidget {
                 Center(
                   child: Column(
                     children: [
-                      const CircleAvatar(
-                        radius: 58,
-                        backgroundImage: AssetImage('assets/images/logo_source.jpg'),
+                      Container(
+                        width: 116,
+                        height: 116,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFF0D0D12),
+                        ),
+                        padding: EdgeInsets.all(6),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/logo_source.jpg',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Text(
