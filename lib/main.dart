@@ -1281,13 +1281,31 @@ class BadgesPage extends StatelessWidget {
       'description': 'Tu as participé à ton premier sondage Twiix.',
       'howTo': 'Participe à ton premier sondage de la communauté.',
       'icon': Icons.how_to_vote_rounded,
+      'secret': false,
     },
     {
       'id': 'polls_10',
       'title': 'Habitué des sondages',
-      'description': 'Tu participes régulièrement aux sondages Twiix.',
+      'description': '10 sondages Twiix à ton actif.',
       'howTo': 'Participe à 10 sondages différents.',
       'icon': Icons.poll_rounded,
+      'secret': false,
+    },
+    {
+      'id': 'polls_50',
+      'title': 'Expert des sondages',
+      'description': 'Tu es devenu un véritable expert des sondages Twiix.',
+      'howTo': 'Participe à 50 sondages différents.',
+      'icon': Icons.workspace_premium_rounded,
+      'secret': false,
+    },
+    {
+      'id': 'polls_100',
+      'title': 'Légende des sondages',
+      'description': '100 sondages : tu entres dans la légende.',
+      'howTo': 'Participe à 100 sondages différents.',
+      'icon': Icons.diamond_rounded,
+      'secret': false,
     },
     {
       'id': 'first_challenge',
@@ -1295,13 +1313,31 @@ class BadgesPage extends StatelessWidget {
       'description': 'Tu as relevé ton premier défi Twiix.',
       'howTo': 'Participe à ton premier défi.',
       'icon': Icons.sports_esports_rounded,
+      'secret': false,
     },
     {
       'id': 'challenges_10',
       'title': 'Compétiteur',
-      'description': 'Les défis Twiix n’ont presque plus de secret pour toi.',
+      'description': '10 défis Twiix relevés.',
       'howTo': 'Participe à 10 défis différents.',
       'icon': Icons.emoji_events_rounded,
+      'secret': false,
+    },
+    {
+      'id': 'challenges_50',
+      'title': 'Maître des défis',
+      'description': 'Tu maîtrises les défis Twiix.',
+      'howTo': 'Réalise 50 défis.',
+      'icon': Icons.military_tech_rounded,
+      'secret': false,
+    },
+    {
+      'id': 'challenges_100',
+      'title': 'Légende Twiix',
+      'description': '100 défis accomplis. Un exploit légendaire.',
+      'howTo': 'Réalise 100 défis.',
+      'icon': Icons.diamond_rounded,
+      'secret': false,
     },
     {
       'id': 'first_event',
@@ -1309,13 +1345,49 @@ class BadgesPage extends StatelessWidget {
       'description': 'Tu as participé à ton premier événement Twiix.',
       'howTo': 'Participe à ton premier événement Twiix.',
       'icon': Icons.event_available_rounded,
+      'secret': false,
     },
     {
       'id': 'twiix_supporter',
       'title': 'Supporter Twiix',
       'description': 'Tu fais partie des membres fidèles de la communauté.',
-      'howTo': 'Condition spéciale à découvrir prochainement.',
+      'howTo': 'Montre ta fidélité à la communauté Twiix.',
       'icon': Icons.shield_rounded,
+      'secret': false,
+    },
+
+    // BADGES SECRETS
+    {
+      'id': 'secret_zin',
+      'title': 'ZIN !',
+      'description': 'Trois, deux... ZIN ! Tu as découvert un secret Twiix.',
+      'howTo': 'Condition secrète.',
+      'icon': Icons.bolt_rounded,
+      'secret': true,
+    },
+    {
+      'id': 'secret_beginning',
+      'title': 'Depuis le début',
+      'description': 'Tu fais partie de ceux qui étaient là dès les débuts.',
+      'howTo': 'Condition secrète.',
+      'icon': Icons.history_rounded,
+      'secret': true,
+    },
+    {
+      'id': 'secret_night',
+      'title': 'Oiseau de nuit',
+      'description': 'Les meilleurs sont là quand les autres dorment.',
+      'howTo': 'Condition secrète.',
+      'icon': Icons.nightlight_round,
+      'secret': true,
+    },
+    {
+      'id': 'secret_chosen',
+      'title': 'Élu des Twiix',
+      'description': 'Une distinction exceptionnelle accordée personnellement par les Twiix.',
+      'howTo': 'Ce badge ne peut être attribué que par les Twiix.',
+      'icon': Icons.auto_awesome_rounded,
+      'secret': true,
     },
   ];
 
@@ -1324,13 +1396,60 @@ class BadgesPage extends StatelessWidget {
     Map<String, Object> badge,
     bool unlocked,
   ) {
+    final secret = badge['secret'] as bool;
+
+    if (secret && !unlocked) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: const Color(0xFF121218),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => const Padding(
+          padding: EdgeInsets.fromLTRB(24, 30, 24, 36),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.lock_rounded,
+                size: 70,
+                color: Colors.white38,
+              ),
+              SizedBox(height: 18),
+              Text(
+                '???',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 4,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Badge secret',
+                style: TextStyle(
+                  color: pink,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Continue à participer à la communauté Twiix pour découvrir comment le débloquer.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white60),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF121218),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
@@ -1372,9 +1491,7 @@ class BadgesPage extends StatelessWidget {
             Text(
               badge['howTo'] as String,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white60,
-              ),
+              style: const TextStyle(color: Colors.white60),
             ),
           ],
         ),
@@ -1404,13 +1521,15 @@ class BadgesPage extends StatelessWidget {
                 .snapshots(),
             builder: (context, snapshot) {
               final unlockedIds =
-                  snapshot.data?.docs.map((doc) => doc.id).toSet() ?? <String>{};
+                  snapshot.data?.docs.map((doc) => doc.id).toSet() ??
+                      <String>{};
 
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: badges.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
@@ -1420,14 +1539,13 @@ class BadgesPage extends StatelessWidget {
                   final badge = badges[index];
                   final unlocked =
                       unlockedIds.contains(badge['id'] as String);
+                  final secret = badge['secret'] as bool;
+                  final hidden = secret && !unlocked;
 
                   return InkWell(
                     borderRadius: BorderRadius.circular(20),
-                    onTap: () => showBadgeDetails(
-                      context,
-                      badge,
-                      unlocked,
-                    ),
+                    onTap: () =>
+                        showBadgeDetails(context, badge, unlocked),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -1448,9 +1566,12 @@ class BadgesPage extends StatelessWidget {
                               clipBehavior: Clip.none,
                               children: [
                                 Icon(
-                                  badge['icon'] as IconData,
+                                  hidden
+                                      ? Icons.help_outline_rounded
+                                      : badge['icon'] as IconData,
                                   size: 56,
-                                  color: unlocked ? pink : Colors.white70,
+                                  color:
+                                      unlocked ? pink : Colors.white70,
                                 ),
                                 if (!unlocked)
                                   const Positioned(
@@ -1466,7 +1587,9 @@ class BadgesPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 14),
                             Text(
-                              badge['title'] as String,
+                              hidden
+                                  ? '???'
+                                  : badge['title'] as String,
                               textAlign: TextAlign.center,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -1475,6 +1598,16 @@ class BadgesPage extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
+                            if (hidden) ...[
+                              const SizedBox(height: 5),
+                              const Text(
+                                'Badge secret',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

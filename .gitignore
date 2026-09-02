@@ -8,3 +8,4 @@ build/
 .vscode/
 android/.gradle/
 ios/Pods/
+lib/main.dart.before_badges
