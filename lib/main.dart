@@ -1359,6 +1359,7 @@ class BadgesPage extends StatelessWidget {
     // BADGES SECRETS
     {
       'id': 'secret_zin',
+      'image': 'assets/images/badges/zin.png',
       'title': 'ZIN !',
       'description': 'Trois, deux... ZIN ! Tu as découvert un secret Twiix.',
       'howTo': 'Condition secrète.',
@@ -1367,6 +1368,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'secret_beginning',
+      'image': 'assets/images/badges/depuis_le_debut.png',
       'title': 'Depuis le début',
       'description': 'Tu fais partie de ceux qui étaient là dès les débuts.',
       'howTo': 'Condition secrète.',
@@ -1375,6 +1377,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'secret_night',
+      'image': 'assets/images/badges/oiseau_de_nuit.png',
       'title': 'Oiseau de nuit',
       'description': 'Les meilleurs sont là quand les autres dorment.',
       'howTo': 'Condition secrète.',
@@ -1383,6 +1386,7 @@ class BadgesPage extends StatelessWidget {
     },
     {
       'id': 'secret_chosen',
+      'image': 'assets/images/badges/elu_des_twiix.png',
       'title': 'Élu des Twiix',
       'description': 'Une distinction exceptionnelle accordée personnellement par les Twiix.',
       'howTo': 'Ce badge ne peut être attribué que par les Twiix.',
@@ -1565,14 +1569,21 @@ class BadgesPage extends StatelessWidget {
                             Stack(
                               clipBehavior: Clip.none,
                               children: [
-                                Icon(
-                                  hidden
-                                      ? Icons.help_outline_rounded
-                                      : badge['icon'] as IconData,
-                                  size: 56,
-                                  color:
-                                      unlocked ? pink : Colors.white70,
-                                ),
+                                if (secret && unlocked)
+                                  Image.asset(
+                                    badge['image'] as String,
+                                    width: 90,
+                                    height: 90,
+                                    fit: BoxFit.contain,
+                                  )
+                                else
+                                  Icon(
+                                    hidden
+                                        ? Icons.help_outline_rounded
+                                        : badge['icon'] as IconData,
+                                    size: 56,
+                                    color: unlocked ? pink : Colors.white70,
+                                  ),
                                 if (!unlocked)
                                   const Positioned(
                                     right: -8,
