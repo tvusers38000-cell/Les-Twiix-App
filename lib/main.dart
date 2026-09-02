@@ -787,18 +787,28 @@ class _PollCardState extends State<PollCard> {
     if (user == null || widget.poll.isFinished) return;
 
     bool unlockedFirstVote = false;
+    final unlockedProgressBadges = <String>[];
 
-    final voteRef = FirebaseFirestore.instance
+    final firestore = FirebaseFirestore.instance;
+
+    final voteRef = firestore
         .collection('polls')
         .doc(widget.poll.id)
         .collection('votes')
         .doc(user.uid);
+
+    final progressRef = firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('progress')
+        .doc('polls');
 
     try {
       final existingVote = await voteRef.get();
 
       if (existingVote.exists) {
         if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Tu as déjà voté à ce sondage.'),
@@ -807,32 +817,73 @@ class _PollCardState extends State<PollCard> {
         return;
       }
 
-      await voteRef.set({
-        'optionIndex': optionIndex,
-        'votedAt': FieldValue.serverTimestamp(),
-      });
+      final newVoteCount = await firestore.runTransaction<int>(
+        (transaction) async {
+          final progressSnapshot = await transaction.get(progressRef);
+
+          final progressData = progressSnapshot.data();
+          final currentCount =
+              (progressData?['count'] as num?)?.toInt() ?? 0;
+
+          final nextCount = currentCount + 1;
+
+          transaction.set(voteRef, {
+            'optionIndex': optionIndex,
+            'votedAt': FieldValue.serverTimestamp(),
+          });
+
+          transaction.set(progressRef, {
+            'count': nextCount,
+            'lastPollId': widget.poll.id,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+          return nextCount;
+        },
+      );
 
       if (!user.isAnonymous) {
-        try {
-          final badgeRef = FirebaseFirestore.instance
+        Future<bool> unlockBadge(String badgeId) async {
+          final badgeRef = firestore
               .collection('users')
               .doc(user.uid)
               .collection('badges')
-              .doc('first_vote');
+              .doc(badgeId);
 
           final badgeSnapshot = await badgeRef.get();
 
-          if (!badgeSnapshot.exists) {
-            await badgeRef.set({
-              'id': 'first_vote',
-              'sourcePollId': widget.poll.id,
-              'unlockedAt': FieldValue.serverTimestamp(),
-            });
+          if (badgeSnapshot.exists) {
+            return false;
+          }
 
-            unlockedFirstVote = true;
+          await badgeRef.set({
+            'id': badgeId,
+            'sourcePollId': widget.poll.id,
+            'unlockedAt': FieldValue.serverTimestamp(),
+          });
+
+          return true;
+        }
+
+        try {
+          unlockedFirstVote = await unlockBadge('first_vote');
+
+          if (newVoteCount >= 10 &&
+              await unlockBadge('polls_10')) {
+            unlockedProgressBadges.add('Habitué des sondages');
+          }
+
+          if (newVoteCount >= 50 &&
+              await unlockBadge('polls_50')) {
+            unlockedProgressBadges.add('Expert des sondages');
+          }
+
+          if (newVoteCount >= 100 &&
+              await unlockBadge('polls_100')) {
+            unlockedProgressBadges.add('Légende des sondages');
           }
         } catch (_) {
-          // Le vote reste valide même si le badge ne peut pas être créé.
+          // Le vote reste valide même si un badge ne peut pas être créé.
         }
       }
 
@@ -844,11 +895,21 @@ class _PollCardState extends State<PollCard> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vote enregistré !'),
-        ),
-      );
+      if (unlockedProgressBadges.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Badge débloqué : ${unlockedProgressBadges.join(', ')} !',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vote enregistré !'),
+          ),
+        );
+      }
     } catch (_) {
       if (!mounted) return;
 

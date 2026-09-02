@@ -9,3 +9,5 @@ build/
 android/.gradle/
 ios/Pods/
 lib/main.dart.before_badges
+
+lib/main.dart.before_poll_progress
