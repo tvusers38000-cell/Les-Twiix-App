@@ -841,18 +841,61 @@ class HomePage extends StatelessWidget {
 }
 class HeroCard extends StatelessWidget {
   final bool isLive;
-  const HeroCard({super.key, required this.isLive});
-  @override Widget build(BuildContext context) => Container(
-    height: 220,
-    decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), image: const DecorationImage(image: AssetImage('assets/images/planning_source.jpeg'), fit: BoxFit.cover), border: Border.all(color: const Color(0x55FF2C7D))),
-    child: Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x22000000), Color(0xEE050509)])), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: [
-      Chip(label: Text(isLive ? '● EN LIVE' : '● HORS LIVE', style: const TextStyle(fontWeight: FontWeight.w800)), backgroundColor: isLive ? const Color(0xDDFF235D) : const Color(0xCC33333D)),
-      const SizedBox(height: 6), Text(isLive ? 'ON EST EN LIVE !' : 'PROCHAINEMENT EN LIVE', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-      Text(isLive ? 'Rejoins Les Twiix et la communauté maintenant.' : 'Retrouve le planning et active tes rappels.', style: const TextStyle(color: Colors.white70)),
-    ])),
-  );
-}
 
+  const HeroCard({
+    super.key,
+    required this.isLive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imagePath = isLive
+        ? 'assets/images/twiix_live_pixel.png'
+        : 'assets/images/twiix_offline_pixel.png';
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      child: Container(
+        key: ValueKey(isLive),
+        height: 220,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isLive
+                ? const Color(0xAAFF235D)
+                : const Color(0x773C7CFF),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isLive
+                  ? const Color(0x33FF235D)
+                  : const Color(0x223C7CFF),
+              blurRadius: 18,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(23),
+          child: SizedBox.expand(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: 1700,
+                height: 760,
+                child: Image.asset(
+                  imagePath,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 class LivesPage extends StatelessWidget {
   final TwiixState state;
   const LivesPage({super.key, required this.state});
