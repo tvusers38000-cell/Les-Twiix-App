@@ -877,6 +877,50 @@ class _HeroCardState extends State<HeroCard>
     super.dispose();
   }
 
+  Widget _sleepZ({
+    required String text,
+    required double right,
+    required double bottom,
+    required double delay,
+    required double fontSize,
+  }) {
+    final raw = (_controller.value + delay) % 1.0;
+    final rise = raw * 24.0;
+
+    final opacity = raw < 0.20
+        ? raw / 0.20
+        : raw > 0.75
+            ? (1.0 - raw) / 0.25
+            : 1.0;
+
+    return Positioned(
+      right: right,
+      bottom: bottom + rise,
+      child: Opacity(
+        opacity: opacity.clamp(0.0, 1.0),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w900,
+            fontFamily: 'monospace',
+            color: const Color(0xFFB8D7FF),
+            shadows: const [
+              Shadow(
+                color: Color(0xFF3C7CFF),
+                blurRadius: 8,
+              ),
+              Shadow(
+                color: Color(0xAA000000),
+                offset: Offset(2, 2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final imagePath = widget.isLive
@@ -921,23 +965,50 @@ class _HeroCardState extends State<HeroCard>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(23),
-              child: SizedBox.expand(
-                child: Transform.scale(
-                  scale: imageScale,
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: 1700,
-                      height: 760,
-                      child: Image.asset(
-                        imagePath,
-                        fit: BoxFit.cover,
-                        alignment: Alignment.topCenter,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Transform.scale(
+                    scale: imageScale,
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: 1700,
+                        height: 760,
+                        child: Image.asset(
+                          imagePath,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.topCenter,
+                        ),
                       ),
                     ),
                   ),
-                ),
+
+                  if (!widget.isLive) ...[
+                    _sleepZ(
+                      text: 'Z',
+                      right: 42,
+                      bottom: 88,
+                      delay: 0.00,
+                      fontSize: 18,
+                    ),
+                    _sleepZ(
+                      text: 'Z',
+                      right: 27,
+                      bottom: 108,
+                      delay: 0.33,
+                      fontSize: 23,
+                    ),
+                    _sleepZ(
+                      text: 'Z',
+                      right: 10,
+                      bottom: 130,
+                      delay: 0.66,
+                      fontSize: 29,
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
