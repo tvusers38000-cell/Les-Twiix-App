@@ -1361,7 +1361,7 @@ class _PollCardState extends State<PollCard> {
               !user.isAnonymous) {
             rewardRef = userRef
                 .collection('challengeRewards')
-                .doc(activePollChallengeRef!.id);
+                .doc(activePollChallengeRef.id);
 
             rewardSnapshot = await transaction.get(rewardRef);
             userSnapshot = await transaction.get(userRef);
@@ -1388,7 +1388,7 @@ class _PollCardState extends State<PollCard> {
                 (userData?['twiixPoints'] as num?)?.toInt() ?? 0;
 
             transaction.set(rewardRef, {
-              'challengeId': activePollChallengeRef!.id,
+              'challengeId': activePollChallengeRef.id,
               'type': 'poll_vote',
               'points': activePollChallengePoints,
               'sourcePollId': widget.poll.id,
@@ -1399,7 +1399,7 @@ class _PollCardState extends State<PollCard> {
               'twiixPoints':
                   currentPoints + activePollChallengePoints,
               'lastChallengeRewardId':
-                  activePollChallengeRef!.id,
+                  activePollChallengeRef.id,
             });
 
             awardedPoints = activePollChallengePoints;
