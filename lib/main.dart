@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'notification_service.dart';
+import 'live_reminder_reward.dart';
 
 
 Future<void> activateLiveReminder(
@@ -47,11 +48,18 @@ Future<void> activateLiveReminder(
       liveTitle: live.title,
     );
 
+    final awardedPoints =
+        await claimLiveReminderReward(live.id);
+
     if (!context.mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Rappel activé ✓'),
+      SnackBar(
+        content: Text(
+          awardedPoints > 0
+              ? 'Rappel activé ✓  +$awardedPoints Twiix Points !'
+              : 'Rappel activé ✓',
+        ),
       ),
     );
   } catch (_) {
@@ -112,26 +120,41 @@ class NewsItem {
 }
 
 class LiveItem {
+  String id;
   String day;
   String time;
   String title;
   bool active;
   DateTime? scheduledAt;
-  LiveItem(this.day, this.time, this.title, {this.active = true, this.scheduledAt});
+
+  LiveItem(
+    this.day,
+    this.time,
+    this.title, {
+    this.id = '',
+    this.active = true,
+    this.scheduledAt,
+  });
+
   Map<String, dynamic> toJson() => {
-    'day': day,
-    'time': time,
-    'title': title,
-    'active': active,
-    'scheduledAt': scheduledAt?.toIso8601String(),
-  };
+        'id': id,
+        'day': day,
+        'time': time,
+        'title': title,
+        'active': active,
+        'scheduledAt': scheduledAt?.toIso8601String(),
+      };
+
   factory LiveItem.fromJson(Map<String, dynamic> j) => LiveItem(
-    j['day'] ?? '',
-    j['time'] ?? '',
-    j['title'] ?? '',
-    active: j['active'] ?? true,
-    scheduledAt: j['scheduledAt'] != null ? DateTime.tryParse(j['scheduledAt']) : null,
-  );
+        j['day'] ?? '',
+        j['time'] ?? '',
+        j['title'] ?? '',
+        id: j['id'] ?? '',
+        active: j['active'] ?? true,
+        scheduledAt: j['scheduledAt'] != null
+            ? DateTime.tryParse(j['scheduledAt'])
+            : null,
+      );
 }
 
 class Donor {
@@ -259,6 +282,7 @@ class TwiixState extends ChangeNotifier {
           data['day'] ?? '',
           data['time'] ?? '',
           data['title'] ?? '',
+            id: doc.id,
           active: data['active'] ?? true,
           scheduledAt: scheduledAt,
         );
@@ -409,7 +433,7 @@ class TwiixState extends ChangeNotifier {
       notifyListeners();
     }
   }
-  Future<void> addLive(String day, String time, String title, {DateTime? scheduledAt}) async { await FirebaseFirestore.instance.collection('lives').add({'day': day, 'time': time, 'title': title, 'active': true, 'scheduledAt': scheduledAt != null ? Timestamp.fromDate(scheduledAt) : null}); lives.add(LiveItem(day, time, title, scheduledAt: scheduledAt)); notifyListeners(); }
+  Future<void> addLive(String day, String time, String title, {DateTime? scheduledAt}) async { final ref = await FirebaseFirestore.instance.collection('lives').add({'day': day, 'time': time, 'title': title, 'active': true, 'scheduledAt': scheduledAt != null ? Timestamp.fromDate(scheduledAt) : null}); lives.add(LiveItem(day, time, title, id: ref.id, scheduledAt: scheduledAt)); notifyListeners(); }
 Future<void> deleteLive(String title, DateTime? scheduledAt) async {    Query query = FirebaseFirestore.instance.collection('lives').where('title', isEqualTo: title);    final snap = await query.get();    for (final doc in snap.docs) {      final data = doc.data() as Map<String, dynamic>;      final ts = data['scheduledAt'];      final dt = ts is Timestamp ? ts.toDate() : null;      if (scheduledAt == null || dt?.millisecondsSinceEpoch == scheduledAt.millisecondsSinceEpoch) {        await doc.reference.delete();        break;      }    }    lives.removeWhere((l) => l.title == title && (scheduledAt == null || l.scheduledAt?.millisecondsSinceEpoch == scheduledAt.millisecondsSinceEpoch));    notifyListeners();  }
   Future<void> deletePoll(String pollId) async {
     final pollRef = FirebaseFirestore.instance.collection('polls').doc(pollId);
