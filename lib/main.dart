@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'notification_service.dart';
 import 'live_reminder_reward.dart';
+import 'live_presence_reward.dart';
 
 
 Future<void> activateLiveReminder(
@@ -83,6 +84,7 @@ Future<void> main() async {
     await FirebaseAuth.instance.signInAnonymously();
   }
   final state = await TwiixState.load();
+  if (state.isLive) { await claimLivePresenceReward(); }
   runApp(TwiixApp(state: state));
 }
 
@@ -361,9 +363,23 @@ class TwiixState extends ChangeNotifier {
       });
     } catch (_) {}
 
+    bool? firestoreIsLive;
+
+    try {
+      final liveStateSnapshot = await FirebaseFirestore.instance
+          .collection('app_state')
+          .doc('live')
+          .get();
+
+      if (liveStateSnapshot.exists) {
+        firestoreIsLive =
+            liveStateSnapshot.data()?['isLive'] == true;
+      }
+    } catch (_) {}
+
     return TwiixState(
       p,
-      isLive: p.getBool('isLive') ?? false,
+      isLive: firestoreIsLive ?? p.getBool('isLive') ?? false,
       news: firestoreNews ?? decodeList('news', NewsItem.fromJson, [
         NewsItem('Bienvenue dans le QG Les Twiix', 'La première vraie version de l’application communautaire démarre ici.'),
         NewsItem('Défi communautaire', 'Participe aux défis et cumule des Twiix Points.'),
@@ -415,7 +431,7 @@ class TwiixState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setLive(bool value) async { isLive = value; notifyListeners(); await _save(); }
+  Future<void> setLive(bool value) async { await FirebaseFirestore.instance.collection('app_state').doc('live').set({'isLive': value, 'updatedAt': FieldValue.serverTimestamp()}); isLive = value; notifyListeners(); await _save(); }
   Future<void> addNews(String title, String body) async {
     await FirebaseFirestore.instance.collection('news').add({
       'title': title,
