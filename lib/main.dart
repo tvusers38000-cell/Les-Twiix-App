@@ -862,7 +862,7 @@ class _HeroCardState extends State<HeroCard>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
 
     _pulse = CurvedAnimation(
@@ -887,12 +887,12 @@ class _HeroCardState extends State<HeroCard>
       animation: _pulse,
       builder: (context, child) {
         final imageScale = widget.isLive
-            ? 1.0 + (_pulse.value * 0.008)
-            : 1.0 + (_pulse.value * 0.004);
+            ? 1.0 + (_pulse.value * 0.035)
+            : 1.0 + (_pulse.value * 0.025);
 
         final glowOpacity = widget.isLive
-            ? 0.18 + (_pulse.value * 0.22)
-            : 0.10 + (_pulse.value * 0.12);
+            ? 0.25 + (_pulse.value * 0.45)
+            : 0.18 + (_pulse.value * 0.30);
 
         final glowColor = widget.isLive
             ? const Color(0xFFFF235D)
@@ -914,8 +914,8 @@ class _HeroCardState extends State<HeroCard>
               boxShadow: [
                 BoxShadow(
                   color: glowColor.withValues(alpha: glowOpacity),
-                  blurRadius: 12 + (_pulse.value * 14),
-                  spreadRadius: _pulse.value * 2,
+                  blurRadius: 12 + (_pulse.value * 28),
+                  spreadRadius: _pulse.value * 5,
                 ),
               ],
             ),
