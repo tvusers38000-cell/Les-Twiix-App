@@ -839,7 +839,7 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-class HeroCard extends StatelessWidget {
+class HeroCard extends StatefulWidget {
   final bool isLive;
 
   const HeroCard({
@@ -848,51 +848,101 @@ class HeroCard extends StatelessWidget {
   });
 
   @override
+  State<HeroCard> createState() => _HeroCardState();
+}
+
+class _HeroCardState extends State<HeroCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+
+    _pulse = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final imagePath = isLive
+    final imagePath = widget.isLive
         ? 'assets/images/twiix_live_pixel.png'
         : 'assets/images/twiix_offline_pixel.png';
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 500),
-      child: Container(
-        key: ValueKey(isLive),
-        height: 220,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isLive
-                ? const Color(0xAAFF235D)
-                : const Color(0x773C7CFF),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isLive
-                  ? const Color(0x33FF235D)
-                  : const Color(0x223C7CFF),
-              blurRadius: 18,
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final imageScale = widget.isLive
+            ? 1.0 + (_pulse.value * 0.008)
+            : 1.0 + (_pulse.value * 0.004);
+
+        final glowOpacity = widget.isLive
+            ? 0.18 + (_pulse.value * 0.22)
+            : 0.10 + (_pulse.value * 0.12);
+
+        final glowColor = widget.isLive
+            ? const Color(0xFFFF235D)
+            : const Color(0xFF3C7CFF);
+
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          child: Container(
+            key: ValueKey(widget.isLive),
+            height: 220,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: glowColor.withValues(
+                  alpha: 0.55 + (_pulse.value * 0.25),
+                ),
+                width: widget.isLive ? 1.6 : 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: glowColor.withValues(alpha: glowOpacity),
+                  blurRadius: 12 + (_pulse.value * 14),
+                  spreadRadius: _pulse.value * 2,
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(23),
-          child: SizedBox.expand(
-            child: FittedBox(
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                width: 1700,
-                height: 760,
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(23),
+              child: SizedBox.expand(
+                child: Transform.scale(
+                  scale: imageScale,
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: 1700,
+                      height: 760,
+                      child: Image.asset(
+                        imagePath,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
