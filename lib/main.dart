@@ -1290,6 +1290,38 @@ class _PollCardState extends State<PollCard> {
         .collection('progress')
         .doc('polls');
 
+    DocumentReference<Map<String, dynamic>>? activePollChallengeRef;
+    int activePollChallengePoints = 0;
+
+    if (!user.isAnonymous) {
+      try {
+        final challengeSnapshot = await firestore
+            .collection('challenges')
+            .where('type', isEqualTo: 'poll_vote')
+            .get();
+
+        final now = DateTime.now();
+
+        for (final doc in challengeSnapshot.docs) {
+          final data = doc.data();
+          final active = data['active'] == true;
+          final endAtRaw = data['endAt'];
+          final endAt =
+              endAtRaw is Timestamp ? endAtRaw.toDate() : null;
+
+          if (active &&
+              (endAt == null || endAt.isAfter(now))) {
+            activePollChallengeRef = doc.reference;
+            activePollChallengePoints =
+                (data['points'] as num?)?.toInt() ?? 0;
+            break;
+          }
+        }
+      } catch (_) {
+        // Le vote reste disponible même si les défis sont indisponibles.
+      }
+    }
+
     try {
       final existingVote = await voteRef.get();
 
@@ -1304,15 +1336,36 @@ class _PollCardState extends State<PollCard> {
         return;
       }
 
-      final newVoteCount = await firestore.runTransaction<int>(
+      final transactionResult =
+          await firestore.runTransaction<List<int>>(
         (transaction) async {
-          final progressSnapshot = await transaction.get(progressRef);
+          final progressSnapshot =
+              await transaction.get(progressRef);
 
           final progressData = progressSnapshot.data();
           final currentCount =
               (progressData?['count'] as num?)?.toInt() ?? 0;
 
           final nextCount = currentCount + 1;
+          int awardedPoints = 0;
+
+          DocumentReference<Map<String, dynamic>>? rewardRef;
+          DocumentSnapshot<Map<String, dynamic>>? rewardSnapshot;
+          DocumentSnapshot<Map<String, dynamic>>? userSnapshot;
+
+          final userRef =
+              firestore.collection('users').doc(user.uid);
+
+          if (activePollChallengeRef != null &&
+              activePollChallengePoints > 0 &&
+              !user.isAnonymous) {
+            rewardRef = userRef
+                .collection('challengeRewards')
+                .doc(activePollChallengeRef!.id);
+
+            rewardSnapshot = await transaction.get(rewardRef);
+            userSnapshot = await transaction.get(userRef);
+          }
 
           transaction.set(voteRef, {
             'optionIndex': optionIndex,
@@ -1325,9 +1378,48 @@ class _PollCardState extends State<PollCard> {
             'updatedAt': FieldValue.serverTimestamp(),
           });
 
-          return nextCount;
+          if (rewardRef != null &&
+              rewardSnapshot != null &&
+              !rewardSnapshot.exists &&
+              userSnapshot != null &&
+              userSnapshot.exists) {
+            final userData = userSnapshot.data();
+            final currentPoints =
+                (userData?['twiixPoints'] as num?)?.toInt() ?? 0;
+
+            transaction.set(rewardRef, {
+              'challengeId': activePollChallengeRef!.id,
+              'type': 'poll_vote',
+              'points': activePollChallengePoints,
+              'sourcePollId': widget.poll.id,
+              'awardedAt': FieldValue.serverTimestamp(),
+            });
+
+            transaction.update(userRef, {
+              'twiixPoints':
+                  currentPoints + activePollChallengePoints,
+              'lastChallengeRewardId':
+                  activePollChallengeRef!.id,
+            });
+
+            awardedPoints = activePollChallengePoints;
+          }
+
+          return [nextCount, awardedPoints];
         },
       );
+
+      final newVoteCount = transactionResult[0];
+      final awardedChallengePoints = transactionResult[1];
+      if (awardedChallengePoints > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '+$awardedChallengePoints Twiix Points gagnés !',
+            ),
+          ),
+        );
+      }
 
       if (!user.isAnonymous) {
         Future<bool> unlockBadge(String badgeId) async {
