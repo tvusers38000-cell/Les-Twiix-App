@@ -143,12 +143,55 @@ class Donor {
 }
 
 class Challenge {
+  String id;
   String title;
   String subtitle;
   int points;
-  Challenge(this.title, this.subtitle, this.points);
-  Map<String, dynamic> toJson() => {'title': title, 'subtitle': subtitle, 'points': points};
-  factory Challenge.fromJson(Map<String, dynamic> j) => Challenge(j['title'] ?? '', j['subtitle'] ?? '', j['points'] ?? 0);
+  String type;
+  bool active;
+  DateTime? endAt;
+
+  Challenge(
+    this.title,
+    this.subtitle,
+    this.points, {
+    this.id = '',
+    this.type = 'custom',
+    this.active = true,
+    this.endAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'subtitle': subtitle,
+        'points': points,
+        'type': type,
+        'active': active,
+        'endAt': endAt?.toIso8601String(),
+      };
+
+  factory Challenge.fromJson(Map<String, dynamic> j) {
+    DateTime? parsedEndAt;
+
+    final rawEndAt = j['endAt'];
+
+    if (rawEndAt is Timestamp) {
+      parsedEndAt = rawEndAt.toDate();
+    } else if (rawEndAt is String) {
+      parsedEndAt = DateTime.tryParse(rawEndAt);
+    }
+
+    return Challenge(
+      j['title'] ?? '',
+      j['subtitle'] ?? '',
+      (j['points'] as num?)?.toInt() ?? 0,
+      id: j['id'] ?? '',
+      type: j['type'] ?? 'custom',
+      active: j['active'] ?? true,
+      endAt: parsedEndAt,
+    );
+  }
 }
 
 class PollItem {
@@ -251,6 +294,49 @@ class TwiixState extends ChangeNotifier {
       firestorePolls.sort((a, b) => a.endAt.compareTo(b.endAt));
     } catch (_) {}
 
+
+    List<Challenge>? firestoreChallenges;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('challenges')
+          .get();
+
+      final now = DateTime.now();
+
+      firestoreChallenges = snap.docs.map((doc) {
+        final data = doc.data();
+        final endTimestamp = data['endAt'];
+
+        return Challenge(
+          data['title'] ?? '',
+          data['subtitle'] ?? '',
+          (data['points'] as num?)?.toInt() ?? 0,
+          id: doc.id,
+          type: data['type'] ?? 'custom',
+          active: data['active'] ?? true,
+          endAt: endTimestamp is Timestamp
+              ? endTimestamp.toDate()
+              : null,
+        );
+      }).where((challenge) {
+        if (!challenge.active) return false;
+
+        if (challenge.endAt != null &&
+            !challenge.endAt!.isAfter(now)) {
+          return false;
+        }
+
+        return true;
+      }).toList();
+
+      firestoreChallenges.sort((a, b) {
+        if (a.endAt == null && b.endAt == null) return 0;
+        if (a.endAt == null) return 1;
+        if (b.endAt == null) return -1;
+        return a.endAt!.compareTo(b.endAt!);
+      });
+    } catch (_) {}
+
     return TwiixState(
       p,
       isLive: p.getBool('isLive') ?? false,
@@ -266,7 +352,7 @@ class TwiixState extends ChangeNotifier {
       donors: decodeList('donors', Donor.fromJson, [
         Donor('TwiixMaster', 3250), Donor('MaxTwiix', 2450), Donor('LaTeamTwiix', 2100), Donor('Fan2Twiix', 1870),
       ]),
-      challenges: decodeList('challenges', Challenge.fromJson, [
+      challenges: firestoreChallenges ?? decodeList('challenges', Challenge.fromJson, [
         Challenge('Défi de la semaine', 'Twiix Dance', 150), Challenge('Clip du mois', 'Envoie ton meilleur clip', 100), Challenge('Quiz Twiix', '10 questions sur les lives', 80),
       ]),
       polls: firestorePolls,
@@ -343,7 +429,35 @@ Future<void> deleteLive(String title, DateTime? scheduledAt) async {    Query qu
   }
 
   Future<void> addDonor(String name, int points) async { donors.add(Donor(name, points)); donors.sort((a,b) => b.points.compareTo(a.points)); notifyListeners(); await _save(); }
-  Future<void> addChallenge(String title, String subtitle, int points) async { challenges.add(Challenge(title, subtitle, points)); notifyListeners(); await _save(); }
+  Future<void> addChallenge(
+    String title,
+    String subtitle,
+    int points, {
+    String type = 'custom',
+    DateTime? endAt,
+  }) async {
+    final ref = await FirebaseFirestore.instance.collection('challenges').add({
+      'title': title.trim(),
+      'subtitle': subtitle.trim(),
+      'points': points,
+      'type': type,
+      'active': true,
+      'endAt': endAt != null ? Timestamp.fromDate(endAt) : null,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    challenges.add(Challenge(
+      title.trim(),
+      subtitle.trim(),
+      points,
+      id: ref.id,
+      type: type,
+      active: true,
+      endAt: endAt,
+    ));
+
+    notifyListeners();
+  }
   Future<void> resetDemo() async { await prefs.clear(); notifyListeners(); }
 }
 
@@ -2743,7 +2857,7 @@ class AdminPage extends StatelessWidget {
   final TwiixState state;
   const AdminPage({super.key, required this.state});
   @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Twiix Admin • Démo')),
+    appBar: AppBar(title: const Text('Twiix Admin')),
     body: ListenableBuilder(listenable: state, builder: (context, _) => ListView(padding: const EdgeInsets.all(16), children: [
       Container(padding: const EdgeInsets.all(16), decoration: cardDecoration(), child: SwitchListTile(contentPadding: EdgeInsets.zero, value: state.isLive, onChanged: state.setLive, title: const Text('Statut LIVE', style: TextStyle(fontWeight: FontWeight.w900)), subtitle: Text(state.isLive ? 'La communauté voit “EN LIVE”.' : 'La communauté voit “HORS LIVE”.'))),
       const SizedBox(height: 12),
@@ -2752,11 +2866,128 @@ class AdminPage extends StatelessWidget {
       AdminAction(icon: Icons.calendar_month, title: 'Ajouter un live', onTap: () => _liveDialog(context, state)),
       AdminAction(icon: Icons.delete_outline, title: 'Gérer les lives', onTap: () => _manageLivesDialog(context, state)),
       AdminAction(icon: Icons.workspace_premium, title: 'Ajouter un donateur', onTap: () => _donorDialog(context, state)),
+      AdminAction(icon: Icons.auto_awesome, title: 'Bibliothèque de défis', onTap: () => _challengeLibraryDialog(context, state)),
       AdminAction(icon: Icons.emoji_events, title: 'Créer un défi', onTap: () => _challengeDialog(context, state)),
       AdminAction(icon: Icons.poll_outlined, title: 'Créer un sondage', onTap: () => _pollDialog(context, state)),
       const SizedBox(height: 18),
-      const Text('Cette V0.2 enregistre les changements sur ce téléphone uniquement. La prochaine étape connectera cet écran à une base en ligne sécurisée pour que les deux admins modifient l’app de toute la communauté.', style: TextStyle(color: Colors.white60)),
+      const Text('Les contenus publiés ici sont synchronisés avec la communauté via Firebase.', style: TextStyle(color: Colors.white60)),
     ])),
+  );
+}
+
+
+Future<void> _challengeLibraryDialog(
+  BuildContext context,
+  TwiixState state,
+) async {
+  final templates = <Map<String, dynamic>>[
+    {
+      'title': 'Le Zin du jour',
+      'subtitle': 'Participe au sondage actif.',
+      'points': 20,
+      'type': 'poll_vote',
+      'icon': Icons.poll_outlined,
+    },
+    {
+      'title': 'Rendez-vous pris',
+      'subtitle': 'Active un rappel pour un prochain live.',
+      'points': 15,
+      'type': 'live_reminder',
+      'icon': Icons.notifications_active_outlined,
+    },
+    {
+      'title': 'Pile à l’heure',
+      'subtitle': 'Ouvre le QG pendant que Les Twiix sont en LIVE.',
+      'points': 30,
+      'type': 'live_presence',
+      'icon': Icons.live_tv,
+    },
+    {
+      'title': 'Fidèle au QG',
+      'subtitle': 'Ouvre le QG pendant 5 jours distincts.',
+      'points': 50,
+      'type': 'loyal_qg_5_days',
+      'icon': Icons.favorite_outline,
+    },
+    {
+      'title': 'Marathon du vote',
+      'subtitle': 'Participe à 10 sondages.',
+      'points': 150,
+      'type': 'polls_10',
+      'icon': Icons.emoji_events_outlined,
+    },
+  ];
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Bibliothèque de défis'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.separated(
+          shrinkWrap: true,
+          itemCount: templates.length,
+          separatorBuilder: (_, __) => const Divider(),
+          itemBuilder: (context, index) {
+            final template = templates[index];
+            final points = template['points'] as int;
+
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(template['icon'] as IconData),
+              title: Text(
+                template['title'] as String,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text(
+                '${template['subtitle']}  •  +$points TP',
+              ),
+              trailing: FilledButton(
+                onPressed: () async {
+                  try {
+                    await state.addChallenge(
+                      template['title'] as String,
+                      template['subtitle'] as String,
+                      points,
+                      type: template['type'] as String,
+                    );
+
+                    if (!dialogContext.mounted) return;
+
+                    Navigator.pop(dialogContext);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${template['title']} activé ✓',
+                        ),
+                      ),
+                    );
+                  } catch (_) {
+                    if (!dialogContext.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Impossible d’activer le défi.',
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('ACTIVER'),
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Fermer'),
+        ),
+      ],
+    ),
   );
 }
 
