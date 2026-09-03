@@ -18,5 +18,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/logo_source.jpg
+    - assets/images/twiix_profile_logo.png
     - assets/images/planning_source.jpeg
     - assets/images/badges/
