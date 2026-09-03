@@ -5,12 +5,71 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'notification_service.dart';
 
+
+Future<void> activateLiveReminder(
+  BuildContext context,
+  LiveItem live,
+) async {
+  final liveAt = live.scheduledAt;
+
+  if (liveAt == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ce live n’a pas encore de date précise.'),
+      ),
+    );
+    return;
+  }
+
+  if (!liveAt.isAfter(DateTime.now())) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ce live est déjà passé.'),
+      ),
+    );
+    return;
+  }
+
+  if (liveAt.difference(DateTime.now()) <= const Duration(minutes: 15)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Le live commence dans moins de 15 minutes.'),
+      ),
+    );
+    return;
+  }
+
+  try {
+    await NotificationService.scheduleLiveReminder(
+      liveAt: liveAt,
+      liveTitle: live.title,
+    );
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Rappel activé ✓'),
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Impossible d’activer le rappel.'),
+      ),
+    );
+  }
+}
 const pink = Color(0xFFFF2C7D);
 const blue = Color(0xFF3C7CFF);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.initialize();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (FirebaseAuth.instance.currentUser == null) {
     await FirebaseAuth.instance.signInAnonymously();
@@ -633,6 +692,7 @@ class HomePage extends StatelessWidget {
                 '${state.lives.first.day} • ${state.lives.first.time}',
             subtitle: state.lives.first.title,
             trailing: 'Me rappeler',
+            onTrailingTap: () => activateLiveReminder(context, state.lives.first),
           ),
 
         if (latestPoll != null) ...[
@@ -797,7 +857,7 @@ class LivesPage extends StatelessWidget {
   final TwiixState state;
   const LivesPage({super.key, required this.state});
   @override Widget build(BuildContext context) => PageFrame(title: 'Planning des lives', children: [
-    ...state.lives.where((l) => l.scheduledAt == null || l.scheduledAt!.isAfter(DateTime.now())).map((l) => Padding(padding: const EdgeInsets.only(bottom: 10), child: InfoCard(icon: Icons.live_tv, title: '${l.day} • ${l.time}', subtitle: l.title, trailing: 'Rappel'))),
+    ...state.lives.where((l) => l.scheduledAt == null || l.scheduledAt!.isAfter(DateTime.now())).map((l) => Padding(padding: const EdgeInsets.only(bottom: 10), child: InfoCard(icon: Icons.live_tv, title: '${l.day} • ${l.time}', subtitle: l.title, trailing: 'Rappel', onTrailingTap: () => activateLiveReminder(context, l)))),
   ]);
 }
 
@@ -2637,9 +2697,66 @@ class SectionTitle extends StatelessWidget {
   @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 9), child: Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)));
 }
 class InfoCard extends StatelessWidget {
-  final IconData icon; final String title; final String subtitle; final String? trailing;
-  const InfoCard({super.key, required this.icon, required this.title, required this.subtitle, this.trailing});
-  @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(15), decoration: cardDecoration(), child: Row(children: [CircleAvatar(backgroundColor: const Color(0x22FF2C7D), child: Icon(icon, color: pink)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text(subtitle, style: const TextStyle(color: Colors.white60))])), if (trailing != null) Text(trailing!, style: const TextStyle(color: pink, fontWeight: FontWeight.w700))]));
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? trailing;
+  final VoidCallback? onTrailingTap;
+
+  const InfoCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.onTrailingTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(15),
+        decoration: cardDecoration(),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: const Color(0x22FF2C7D),
+              child: Icon(icon, color: pink),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white60),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null)
+              InkWell(
+                onTap: onTrailingTap,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(
+                    trailing!,
+                    style: const TextStyle(
+                      color: pink,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
 }
 class MiniAction extends StatelessWidget {
   final IconData icon;
