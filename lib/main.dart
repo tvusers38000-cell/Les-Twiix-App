@@ -1336,6 +1336,8 @@ class _PollCardState extends State<PollCard> {
         return;
       }
 
+      final activePollChallengeId = activePollChallengeRef?.id;
+
       final transactionResult =
           await firestore.runTransaction<List<int>>(
         (transaction) async {
@@ -1356,12 +1358,12 @@ class _PollCardState extends State<PollCard> {
           final userRef =
               firestore.collection('users').doc(user.uid);
 
-          if (activePollChallengeRef != null &&
+          if (activePollChallengeId != null &&
               activePollChallengePoints > 0 &&
               !user.isAnonymous) {
             rewardRef = userRef
                 .collection('challengeRewards')
-                .doc(activePollChallengeRef.id);
+                .doc(activePollChallengeId);
 
             rewardSnapshot = await transaction.get(rewardRef);
             userSnapshot = await transaction.get(userRef);
@@ -1382,13 +1384,14 @@ class _PollCardState extends State<PollCard> {
               rewardSnapshot != null &&
               !rewardSnapshot.exists &&
               userSnapshot != null &&
-              userSnapshot.exists) {
+              userSnapshot.exists &&
+                activePollChallengeId != null) {
             final userData = userSnapshot.data();
             final currentPoints =
                 (userData?['twiixPoints'] as num?)?.toInt() ?? 0;
 
             transaction.set(rewardRef, {
-              'challengeId': activePollChallengeRef.id,
+              'challengeId': activePollChallengeId,
               'type': 'poll_vote',
               'points': activePollChallengePoints,
               'sourcePollId': widget.poll.id,
@@ -1399,7 +1402,7 @@ class _PollCardState extends State<PollCard> {
               'twiixPoints':
                   currentPoints + activePollChallengePoints,
               'lastChallengeRewardId':
-                  activePollChallengeRef.id,
+                  activePollChallengeId,
             });
 
             awardedPoints = activePollChallengePoints;
