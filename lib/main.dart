@@ -3668,6 +3668,14 @@ Future<void> _manageLivesDialog(BuildContext context, TwiixState state) async {
 class MascotteRunPage extends StatelessWidget {
   const MascotteRunPage({super.key});
 
+  void _openGame(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MascotteRunPlayPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -3675,8 +3683,148 @@ class MascotteRunPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('La Mascotte Run'),
       ),
-      body: GameWidget(
-        game: MascotteRunGame(),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const Spacer(),
+              const Icon(
+                Icons.pets_rounded,
+                size: 76,
+                color: pink,
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'LA MASCOTTE RUN',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Cours, saute et récupère les ballons !',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 22),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: cardDecoration(),
+                child: const Column(
+                  children: [
+                    Text(
+                      'RECORD PERSONNEL',
+                      style: TextStyle(
+                        color: Colors.white60,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '0 m',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: pink,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: FilledButton.icon(
+                  onPressed: () => _openGame(context),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text(
+                    'JOUER',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.leaderboard_rounded),
+                      label: const Text('CLASSEMENT'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.workspace_premium_rounded),
+                      label: const Text('BADGES'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: null,
+                  icon: const Icon(Icons.volume_up_rounded),
+                  label: const Text('SON'),
+                ),
+              ),
+              const Spacer(),
+              const Text(
+                'Trois, deux, Zin !',
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MascotteRunPlayPage extends StatelessWidget {
+  const MascotteRunPlayPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090D),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GameWidget(
+                game: MascotteRunGame(),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              left: 10,
+              child: IconButton.filledTonal(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
