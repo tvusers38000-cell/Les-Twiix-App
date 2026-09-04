@@ -2550,32 +2550,136 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: cardDecoration(),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.stars_rounded, color: pink, size: 34),
-                      const SizedBox(width: 14),
-                      Column(
+                Builder(
+                  builder: (context) {
+                    String levelName;
+                    int levelStart;
+                    int? nextLevelPoints;
+                    String? nextLevelName;
+
+                    if (points >= 5000) {
+                      levelName = 'Maître Zin';
+                      levelStart = 5000;
+                      nextLevelPoints = null;
+                      nextLevelName = null;
+                    } else if (points >= 3000) {
+                      levelName = 'Légende du QG';
+                      levelStart = 3000;
+                      nextLevelPoints = 5000;
+                      nextLevelName = 'Maître Zin';
+                    } else if (points >= 1500) {
+                      levelName = 'Élite Twiix';
+                      levelStart = 1500;
+                      nextLevelPoints = 3000;
+                      nextLevelName = 'Légende du QG';
+                    } else if (points >= 750) {
+                      levelName = 'Twiix Addict';
+                      levelStart = 750;
+                      nextLevelPoints = 1500;
+                      nextLevelName = 'Élite Twiix';
+                    } else if (points >= 250) {
+                      levelName = 'Membre du QG';
+                      levelStart = 250;
+                      nextLevelPoints = 750;
+                      nextLevelName = 'Twiix Addict';
+                    } else {
+                      levelName = 'Nouveau Zin';
+                      levelStart = 0;
+                      nextLevelPoints = 250;
+                      nextLevelName = 'Membre du QG';
+                    }
+
+                    final progress = nextLevelPoints == null
+                        ? 1.0
+                        : ((points - levelStart) /
+                                (nextLevelPoints - levelStart))
+                            .clamp(0.0, 1.0)
+                            .toDouble();
+
+                    final remaining = nextLevelPoints == null
+                        ? 0
+                        : nextLevelPoints - points;
+
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: cardDecoration(),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Twiix Points',
-                            style: TextStyle(color: Colors.white60),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.stars_rounded,
+                                color: pink,
+                                size: 34,
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Niveau Twiix',
+                                      style: TextStyle(
+                                        color: Colors.white60,
+                                      ),
+                                    ),
+                                    Text(
+                                      levelName,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '$points TP',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: pink,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            '$points',
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
+                          const SizedBox(height: 16),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: 10,
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.10),
+                              valueColor:
+                                  const AlwaysStoppedAnimation<Color>(pink),
                             ),
                           ),
+                          const SizedBox(height: 10),
+                          Text(
+                            nextLevelPoints == null
+                                ? 'Niveau maximum atteint'
+                                : '$points / $nextLevelPoints TP',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (nextLevelName != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '$remaining TP avant $nextLevelName',
+                              style: const TextStyle(
+                                color: Colors.white60,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 18),
                 const SectionTitle('Mes badges'),
