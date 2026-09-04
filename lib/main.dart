@@ -769,7 +769,7 @@ class _ShellState extends State<Shell> {
     return ListenableBuilder(
       listenable: widget.state,
       builder: (context, _) {
-        final pages = [HomePage(state: widget.state, onNavigate: (i) => setState(() => index = i)), LivesPage(state: widget.state), ChallengesPage(state: widget.state), DonorsPage(state: widget.state), ProfilePage(state: widget.state)];
+          final pages = [HomePage(state: widget.state, onNavigate: (i) => setState(() => index = i)), LivesPage(state: widget.state), ChallengesPage(state: widget.state), DonorsPage(state: widget.state), MascotteRunPage(), ProfilePage(state: widget.state)];
         return Scaffold(
           body: SafeArea(child: IndexedStack(index: index, children: pages)),
           bottomNavigationBar: NavigationBar(
@@ -782,6 +782,7 @@ class _ShellState extends State<Shell> {
               NavigationDestination(icon: Icon(Icons.live_tv_outlined), selectedIcon: Icon(Icons.live_tv), label: 'Lives'),
               NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Défis'),
               NavigationDestination(icon: Icon(Icons.workspace_premium_outlined), selectedIcon: Icon(Icons.workspace_premium), label: 'Donateurs'),
+                NavigationDestination(icon: Icon(Icons.sports_esports_outlined), selectedIcon: Icon(Icons.sports_esports), label: 'Jeu'),
               NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profil'),
             ],
           ),
@@ -3660,4 +3661,71 @@ Future<void> _manageLivesDialog(BuildContext context, TwiixState state) async {
       ],
     ),
   );
+}
+
+class MascotteRunPage extends StatelessWidget {
+  const MascotteRunPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PageFrame(
+      title: 'La Mascotte Run',
+      children: [
+        const SizedBox(height: 30),
+        const Center(
+          child: Icon(
+            Icons.sports_esports_rounded,
+            size: 72,
+            color: pink,
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'LA MASCOTTE RUN',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Cours, saute et récupère les ballons !',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white60,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: cardDecoration(),
+          child: const Column(
+            children: [
+              Icon(
+                Icons.pets_rounded,
+                color: pink,
+                size: 42,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'La Mascotte se prépare...',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Le terrain ouvrira bientôt.',
+                style: TextStyle(color: Colors.white60),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
