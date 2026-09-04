@@ -10,6 +10,8 @@ import 'live_reminder_reward.dart';
 import 'live_presence_reward.dart';
 import 'loyal_qg_reward.dart';
 import 'polls_10_reward.dart';
+import 'package:flame/game.dart';
+import 'mascotte_run_game.dart';
 
 
 Future<void> activateLiveReminder(
@@ -3668,64 +3670,14 @@ class MascotteRunPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PageFrame(
-      title: 'La Mascotte Run',
-      children: [
-        const SizedBox(height: 30),
-        const Center(
-          child: Icon(
-            Icons.sports_esports_rounded,
-            size: 72,
-            color: pink,
-          ),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'LA MASCOTTE RUN',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Cours, saute et récupère les ballons !',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white60,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: cardDecoration(),
-          child: const Column(
-            children: [
-              Icon(
-                Icons.pets_rounded,
-                color: pink,
-                size: 42,
-              ),
-              SizedBox(height: 12),
-              Text(
-                'La Mascotte se prépare...',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              SizedBox(height: 6),
-              Text(
-                'Le terrain ouvrira bientôt.',
-                style: TextStyle(color: Colors.white60),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090D),
+      appBar: AppBar(
+        title: const Text('La Mascotte Run'),
+      ),
+      body: GameWidget(
+        game: MascotteRunGame(),
+      ),
     );
   }
 }
