@@ -8,6 +8,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   static const double gravity = 1500;
   static const double jumpForce = -620;
 
+  late final RectangleComponent sky;
+  late final RectangleComponent mountainBack;
+  late final RectangleComponent mountainFront;
+  late final RectangleComponent river;
+  late final RectangleComponent quay;
   late final RectangleComponent ground;
   late final RectangleComponent mascotte;
 
@@ -15,26 +20,66 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   bool onGround = true;
 
   @override
-  Color backgroundColor() => const Color(0xFF09090D);
+  Color backgroundColor() => const Color(0xFF77C8FF);
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
+    sky = RectangleComponent(
+      position: Vector2.zero(),
+      size: Vector2(size.x, size.y),
+      paint: Paint()..color = const Color(0xFF77C8FF),
+    );
+
+    mountainBack = RectangleComponent(
+      position: Vector2(0, size.y * 0.28),
+      size: Vector2(size.x, size.y * 0.22),
+      paint: Paint()..color = const Color(0xFF8FB5C9),
+    );
+
+    mountainFront = RectangleComponent(
+      position: Vector2(0, size.y * 0.40),
+      size: Vector2(size.x, size.y * 0.18),
+      paint: Paint()..color = const Color(0xFF527A63),
+    );
+
+    river = RectangleComponent(
+      position: Vector2(0, size.y - groundHeight - 90),
+      size: Vector2(size.x, 90),
+      paint: Paint()..color = const Color(0xFF4DA7D9),
+    );
+
+    quay = RectangleComponent(
+      position: Vector2(0, size.y - groundHeight - 30),
+      size: Vector2(size.x, 30),
+      paint: Paint()..color = const Color(0xFF8C8C8C),
+    );
+
     ground = RectangleComponent(
       position: Vector2(0, size.y - groundHeight),
       size: Vector2(size.x, groundHeight),
-      paint: Paint()..color = const Color(0xFF19191F),
+      paint: Paint()..color = const Color(0xFF4F6F3A),
     );
 
     mascotte = RectangleComponent(
-      position: Vector2(70, size.y - groundHeight - 55),
+      position: Vector2(
+        70,
+        size.y - groundHeight - 55,
+      ),
       size: Vector2(55, 55),
       paint: Paint()..color = const Color(0xFFFF2C7D),
     );
 
-    add(ground);
-    add(mascotte);
+    addAll([
+      sky,
+      mountainBack,
+      mountainFront,
+      river,
+      quay,
+      ground,
+      mascotte,
+    ]);
   }
 
   @override
@@ -68,6 +113,24 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     super.onGameResize(newSize);
 
     if (!isLoaded) return;
+
+    sky.size = Vector2(newSize.x, newSize.y);
+
+    mountainBack
+      ..position = Vector2(0, newSize.y * 0.28)
+      ..size = Vector2(newSize.x, newSize.y * 0.22);
+
+    mountainFront
+      ..position = Vector2(0, newSize.y * 0.40)
+      ..size = Vector2(newSize.x, newSize.y * 0.18);
+
+    river
+      ..position = Vector2(0, newSize.y - groundHeight - 90)
+      ..size = Vector2(newSize.x, 90);
+
+    quay
+      ..position = Vector2(0, newSize.y - groundHeight - 30)
+      ..size = Vector2(newSize.x, 30);
 
     ground
       ..position = Vector2(0, newSize.y - groundHeight)
