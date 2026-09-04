@@ -9,6 +9,7 @@ import 'notification_service.dart';
 import 'live_reminder_reward.dart';
 import 'live_presence_reward.dart';
 import 'loyal_qg_reward.dart';
+import 'polls_10_reward.dart';
 
 
 Future<void> activateLiveReminder(
@@ -1455,6 +1456,19 @@ class _PollCardState extends State<PollCard> {
       );
 
       final newVoteCount = transactionResult[0];
+      final awardedPolls10Points =
+          await claimPolls10Reward(newVoteCount);
+
+      if (awardedPolls10Points > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '+$awardedPolls10Points Twiix Points Marathon du vote !',
+            ),
+          ),
+        );
+      }
+
       final awardedChallengePoints = transactionResult[1];
       if (awardedChallengePoints > 0 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
