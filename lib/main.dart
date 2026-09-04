@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'notification_service.dart';
 import 'live_reminder_reward.dart';
 import 'live_presence_reward.dart';
+import 'loyal_qg_reward.dart';
 
 
 Future<void> activateLiveReminder(
@@ -84,6 +85,7 @@ Future<void> main() async {
     await FirebaseAuth.instance.signInAnonymously();
   }
   final state = await TwiixState.load();
+  await recordQGVisit();
   if (state.isLive) { await claimLivePresenceReward(); }
   runApp(TwiixApp(state: state));
 }
