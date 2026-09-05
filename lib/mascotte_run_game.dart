@@ -6,7 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 class GrenobleBackdrop extends PositionComponent {
-  double scrollOffset = 0;
+  late final SpriteComponent background;
 
   GrenobleBackdrop({required Vector2 gameSize})
       : super(
@@ -16,121 +16,26 @@ class GrenobleBackdrop extends PositionComponent {
         );
 
   @override
-  void render(Canvas canvas) {
-    super.render(canvas);
+  Future<void> onLoad() async {
+    await super.onLoad();
 
-    final w = size.x;
-    final h = size.y;
-
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, w, h),
-      Paint()..color = const Color(0xFF69B9E8),
+    background = SpriteComponent(
+      sprite: await Sprite.load('mascotte_run_grenoble.png'),
+      position: Vector2.zero(),
+      size: Vector2(size.x, size.y),
     );
 
-    final backMountain = Paint()..color = const Color(0xFF92A9B5);
-    final frontMountain = Paint()..color = const Color(0xFF526B67);
-    final snow = Paint()..color = const Color(0xFFEAF4F7);
-
-    final backPath = Path()
-      ..moveTo(0, h * 0.47)
-      ..lineTo(w * 0.13, h * 0.27)
-      ..lineTo(w * 0.25, h * 0.39)
-      ..lineTo(w * 0.42, h * 0.20)
-      ..lineTo(w * 0.57, h * 0.40)
-      ..lineTo(w * 0.74, h * 0.24)
-      ..lineTo(w, h * 0.45)
-      ..lineTo(w, h * 0.58)
-      ..lineTo(0, h * 0.58)
-      ..close();
-
-    canvas.drawPath(backPath, backMountain);
-
-    final snowPath = Path()
-      ..moveTo(w * 0.34, h * 0.29)
-      ..lineTo(w * 0.42, h * 0.20)
-      ..lineTo(w * 0.49, h * 0.30)
-      ..lineTo(w * 0.44, h * 0.27)
-      ..lineTo(w * 0.41, h * 0.31)
-      ..close();
-
-    canvas.drawPath(snowPath, snow);
-
-    final frontPath = Path()
-      ..moveTo(0, h * 0.55)
-      ..lineTo(w * 0.16, h * 0.40)
-      ..lineTo(w * 0.33, h * 0.52)
-      ..lineTo(w * 0.52, h * 0.36)
-      ..lineTo(w * 0.72, h * 0.52)
-      ..lineTo(w * 0.88, h * 0.39)
-      ..lineTo(w, h * 0.50)
-      ..lineTo(w, h * 0.64)
-      ..lineTo(0, h * 0.64)
-      ..close();
-
-    canvas.drawPath(frontPath, frontMountain);
-
-    _drawCity(canvas, w, h);
-
-    canvas.drawRect(
-      Rect.fromLTWH(0, h - 180, w, 90),
-      Paint()..color = const Color(0xFF4B9ECC),
-    );
-
-    for (double x = -30; x < w + 40; x += 70) {
-      canvas.drawRect(
-        Rect.fromLTWH(x, h - 155, 35, 4),
-        Paint()..color = const Color(0x55FFFFFF),
-      );
-    }
-
-    canvas.drawRect(
-      Rect.fromLTWH(0, h - 105, w, 15),
-      Paint()..color = const Color(0xFF777777),
-    );
+    add(background);
   }
 
-  void _drawCity(Canvas canvas, double w, double h) {
-    const buildingWidth = 42.0;
-    const spacing = 12.0;
-    final cycle = buildingWidth + spacing;
+  @override
+  void onGameResize(Vector2 newSize) {
+    super.onGameResize(newSize);
 
-    final offset = scrollOffset % cycle;
+    size = Vector2(newSize.x, newSize.y);
 
-    int index = 0;
-
-    for (double x = -cycle - offset; x < w + cycle; x += cycle) {
-      final height = 38.0 + ((index % 4) * 11);
-
-      final buildingPaint = Paint()
-        ..color = index.isEven
-            ? const Color(0xFF59646C)
-            : const Color(0xFF69757C);
-
-      canvas.drawRect(
-        Rect.fromLTWH(
-          x,
-          h - 180 - height,
-          buildingWidth,
-          height,
-        ),
-        buildingPaint,
-      );
-
-      final windowPaint = Paint()..color = const Color(0xFFFFD56A);
-
-      for (double wy = h - 170 - height; wy <= h - 195; wy += 14) {
-        canvas.drawRect(
-          Rect.fromLTWH(x + 8, wy, 6, 6),
-          windowPaint,
-        );
-
-        canvas.drawRect(
-          Rect.fromLTWH(x + 25, wy, 6, 6),
-          windowPaint,
-        );
-      }
-
-      index++;
+    if (isLoaded) {
+      background.size = Vector2(newSize.x, newSize.y);
     }
   }
 }
@@ -503,7 +408,6 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     worldSpeed =
         (startSpeed + distance * 0.55).clamp(startSpeed, maxSpeed).toDouble();
 
-    backdrop.scrollOffset += worldSpeed * 0.10 * dt;
 
     distanceText.text = 'DISTANCE  ${distance.floor()} m';
 
