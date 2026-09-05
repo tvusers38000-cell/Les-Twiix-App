@@ -26,5 +26,6 @@ flutter:
     - assets/images/twiix_offline_pixel.png
     - assets/images/twiix_live_pixel.png
     - assets/images/mascotte_run_frame.png
+    - assets/images/mascotte_run_cover.png
     - assets/images/planning_source.jpeg
     - assets/images/badges/
