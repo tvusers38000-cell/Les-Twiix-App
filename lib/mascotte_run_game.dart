@@ -20,7 +20,7 @@ class GrenobleBackdrop extends PositionComponent {
     await super.onLoad();
 
     background = SpriteComponent(
-      sprite: await Sprite.load('mascotte_run_grenoble.png'),
+      sprite: await game.loadSprite('mascotte_run_grenoble.png'),
       position: Vector2.zero(),
       size: Vector2(size.x, size.y),
     );
