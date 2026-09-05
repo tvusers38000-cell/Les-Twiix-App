@@ -3684,129 +3684,169 @@ class MascotteRunPage extends StatelessWidget {
         title: const Text('La Mascotte Run'),
         backgroundColor: Colors.black,
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/images/mascotte_run_cover.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-          ),
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Color(0x33000000),
-                  Color(0xEE09090D),
-                  Color(0xFF09090D),
-                ],
-                stops: [0.35, 0.55, 0.76, 1.0],
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              flex: 13,
+              child: Container(
+                width: double.infinity,
+                color: Colors.black,
+                child: Image.asset(
+                  'assets/images/mascotte_run_cover.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
-              child: Column(
-                children: [
-                  const Spacer(),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.72),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.12),
-                      ),
-                    ),
-                    child: const Column(
+            Expanded(
+              flex: 7,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                color: const Color(0xFF09090D),
+                child: Column(
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          'RECORD PERSONNEL',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w800,
+                        Expanded(
+                          child: Container(
+                            height: 54,
+                            decoration: cardDecoration(),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.emoji_events_rounded,
+                                  color: pink,
+                                ),
+                                SizedBox(width: 8),
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'RECORD',
+                                      style: TextStyle(
+                                        color: Colors.white60,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    Text(
+                                      '0 m',
+                                      style: TextStyle(
+                                        color: pink,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        SizedBox(height: 3),
-                        Text(
-                          '0 m',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: pink,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: SizedBox(
+                            height: 54,
+                            child: FilledButton.icon(
+                              onPressed: () => _openGame(context),
+                              icon: const Icon(
+                                Icons.play_arrow_rounded,
+                                size: 28,
+                              ),
+                              label: const Text(
+                                'JOUER',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 58,
-                    child: FilledButton.icon(
-                      onPressed: () => _openGame(context),
-                      icon: const Icon(
-                        Icons.play_arrow_rounded,
-                        size: 30,
-                      ),
-                      label: const Text(
-                        'JOUER',
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: null,
-                          icon: const Icon(Icons.leaderboard_rounded),
-                          label: const Text('CLASSEMENT'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: null,
-                          icon: const Icon(
-                            Icons.workspace_premium_rounded,
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _MascotteMenuButton(
+                              icon: Icons.leaderboard_rounded,
+                              label: 'CLASSEMENT',
+                            ),
                           ),
-                          label: const Text('BADGES'),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _MascotteMenuButton(
+                              icon: Icons.workspace_premium_rounded,
+                              label: 'BADGES',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _MascotteMenuButton(
+                              icon: Icons.volume_up_rounded,
+                              label: 'SON',
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: null,
-                      icon: const Icon(Icons.volume_up_rounded),
-                      label: const Text('SON'),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Trois, deux, Zin !',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Trois, deux, Zin !',
+                      style: TextStyle(
+                        color: Colors.white60,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MascotteMenuButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MascotteMenuButton({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: null,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 4,
+          vertical: 6,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 23),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
