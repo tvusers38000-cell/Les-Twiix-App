@@ -15,6 +15,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   late final RectangleComponent quay;
   late final RectangleComponent ground;
   late final SpriteComponent mascotte;
+  late final TextComponent distanceText;
+  double distance = 0;
 
   double verticalSpeed = 0;
   bool onGround = true;
@@ -68,6 +70,26 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       size: Vector2(105, 75),
     );
 
+    distanceText = TextComponent(
+      text: "DISTANCE  0 m",
+      position: Vector2(size.x - 16, 18),
+      anchor: Anchor.topRight,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 5,
+              offset: Offset(1, 2),
+            ),
+          ],
+        ),
+      ),
+    );
+
     addAll([
       sky,
       mountainBack,
@@ -76,12 +98,16 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       quay,
       ground,
       mascotte,
+      distanceText,
     ]);
   }
 
   @override
   void update(double dt) {
     super.update(dt);
+
+    distance += 18 * dt;
+    distanceText.text = "DISTANCE  ${distance.floor()} m";
 
     verticalSpeed += gravity * dt;
     mascotte.position.y += verticalSpeed * dt;
