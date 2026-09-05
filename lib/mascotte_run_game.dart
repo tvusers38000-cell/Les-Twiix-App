@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GrenobleBackdrop extends PositionComponent {
   late final SpriteComponent background1;
@@ -488,6 +489,16 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   TextComponent? finalScoreText;
   TextComponent? restartText;
 
+  static const String bestDistanceKey = 'mascotte_run_best_distance';
+
+  static const List<int> distanceMilestones = [
+    500,
+    1000,
+    2000,
+    3500,
+    5000,
+  ];
+
   int get score => distance.floor() + (ballsCollected * 50);
 
   @override
@@ -781,6 +792,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     gameOver = true;
     verticalSpeed = 0;
 
+    _saveBestDistance();
+
     gameOverText = TextComponent(
       text: 'GAME OVER',
       position: Vector2(size.x / 2, size.y * 0.30),
@@ -868,6 +881,25 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       finalScoreText!,
       restartText!,
     ]);
+  }
+
+  Future<void> _saveBestDistance() async {
+    final currentDistance = distance.floor();
+    final prefs = await SharedPreferences.getInstance();
+    final previousBest = prefs.getInt(bestDistanceKey) ?? 0;
+
+    if (currentDistance > previousBest) {
+      await prefs.setInt(bestDistanceKey, currentDistance);
+    }
+
+    for (final milestone in distanceMilestones) {
+      if (currentDistance >= milestone) {
+        await prefs.setBool(
+          'mascotte_run_milestone_$milestone',
+          true,
+        );
+      }
+    }
   }
 
   void _restartGame() {

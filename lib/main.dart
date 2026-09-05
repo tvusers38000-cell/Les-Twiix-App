@@ -3665,15 +3665,41 @@ Future<void> _manageLivesDialog(BuildContext context, TwiixState state) async {
   );
 }
 
-class MascotteRunPage extends StatelessWidget {
+class MascotteRunPage extends StatefulWidget {
   const MascotteRunPage({super.key});
 
-  void _openGame(BuildContext context) {
-    Navigator.of(context).push(
+  @override
+  State<MascotteRunPage> createState() => _MascotteRunPageState();
+}
+
+class _MascotteRunPageState extends State<MascotteRunPage> {
+  int _bestDistance = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBestDistance();
+  }
+
+  Future<void> _loadBestDistance() async {
+    final prefs = await SharedPreferences.getInstance();
+    final best = prefs.getInt('mascotte_run_best_distance') ?? 0;
+
+    if (!mounted) return;
+
+    setState(() {
+      _bestDistance = best;
+    });
+  }
+
+  Future<void> _openGame(BuildContext context) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const MascotteRunPlayPage(),
       ),
     );
+
+    await _loadBestDistance();
   }
 
   @override
@@ -3712,10 +3738,10 @@ class MascotteRunPage extends StatelessWidget {
                           child: Container(
                             height: 54,
                             decoration: cardDecoration(),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.emoji_events_rounded,
                                   color: pink,
                                 ),
@@ -3724,7 +3750,7 @@ class MascotteRunPage extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
+                                    const Text(
                                       'RECORD',
                                       style: TextStyle(
                                         color: Colors.white60,
@@ -3733,8 +3759,8 @@ class MascotteRunPage extends StatelessWidget {
                                       ),
                                     ),
                                     Text(
-                                      '0 m',
-                                      style: TextStyle(
+                                      '$_bestDistance m',
+                                      style: const TextStyle(
                                         color: pink,
                                         fontSize: 20,
                                         fontWeight: FontWeight.w900,
