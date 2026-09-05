@@ -7,9 +7,12 @@ import 'package:flutter/material.dart';
 
 class GrenobleBackdrop extends PositionComponent {
   late final SpriteComponent background;
+  final Images gameImages;
 
-  GrenobleBackdrop({required Vector2 gameSize})
-      : super(
+  GrenobleBackdrop({
+    required Vector2 gameSize,
+    required this.gameImages,
+  }) : super(
           position: Vector2.zero(),
           size: gameSize,
           priority: -100,
@@ -20,7 +23,9 @@ class GrenobleBackdrop extends PositionComponent {
     await super.onLoad();
 
     background = SpriteComponent(
-      sprite: await game.loadSprite('mascotte_run_grenoble.png'),
+      sprite: Sprite(
+        await gameImages.load('mascotte_run_grenoble.png'),
+      ),
       position: Vector2.zero(),
       size: Vector2(size.x, size.y),
     );
@@ -293,6 +298,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     backdrop = GrenobleBackdrop(
       gameSize: Vector2(size.x, size.y),
+      gameImages: images,
     );
 
     ground = RectangleComponent(
