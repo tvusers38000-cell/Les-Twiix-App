@@ -409,8 +409,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         size.y - groundHeight - 50,
       ),
       size: Vector2(34, 50),
-      priority: 15,
-    );
+    )..priority = 15;
 
     ball = PixelFootball(
       position: Vector2(
