@@ -3702,6 +3702,14 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
     await _loadBestDistance();
   }
 
+  void _openBadges(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MascotteRunBadgesPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -3810,6 +3818,7 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
                             child: _MascotteMenuButton(
                               icon: Icons.workspace_premium_rounded,
                               label: 'BADGES',
+                                onPressed: () => _openBadges(context),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -3845,16 +3854,18 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
 class _MascotteMenuButton extends StatelessWidget {
   final IconData icon;
   final String label;
+  final VoidCallback? onPressed;
 
   const _MascotteMenuButton({
     required this.icon,
     required this.label,
+    this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(
-      onPressed: null,
+      onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(
           horizontal: 4,
@@ -3874,6 +3885,179 @@ class _MascotteMenuButton extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MascotteRunBadgesPage extends StatefulWidget {
+  const MascotteRunBadgesPage({super.key});
+
+  @override
+  State<MascotteRunBadgesPage> createState() =>
+      _MascotteRunBadgesPageState();
+}
+
+class _MascotteRunBadgesPageState extends State<MascotteRunBadgesPage> {
+  int _bestDistance = 0;
+
+  static const List<(int, String, IconData)> _badges = [
+    (500, 'Premiers pas', Icons.pets_rounded),
+    (1000, 'Zin Runner', Icons.directions_run_rounded),
+    (2000, 'Chihuahua', Icons.bolt_rounded),
+    (3500, 'Maître Chien', Icons.military_tech_rounded),
+    (5000, 'King Gnomi', Icons.emoji_events_rounded),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProgress();
+  }
+
+  Future<void> _loadProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final best = prefs.getInt('mascotte_run_best_distance') ?? 0;
+
+    if (!mounted) return;
+
+    setState(() {
+      _bestDistance = best;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090D),
+      appBar: AppBar(
+        title: const Text('Badges de Gnomi'),
+        backgroundColor: Colors.black,
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              'RECORD  $_bestDistance m',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: pink,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Cours toujours plus loin avec Gnomi pour débloquer les cinq rangs.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white60,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 20),
+            for (final badge in _badges)
+              _buildBadge(
+                badge.$1,
+                badge.$2,
+                badge.$3,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(
+    int target,
+    String title,
+    IconData icon,
+  ) {
+    final unlocked = _bestDistance >= target;
+    final progress =
+        (_bestDistance / target).clamp(0.0, 1.0).toDouble();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: unlocked
+            ? const Color(0xFF1B1319)
+            : const Color(0xFF121217),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: unlocked ? pink : Colors.white12,
+          width: unlocked ? 2 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: unlocked
+                  ? pink.withValues(alpha: 0.16)
+                  : Colors.white10,
+            ),
+            child: Icon(
+              unlocked ? icon : Icons.lock_rounded,
+              color: unlocked ? pink : Colors.white38,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color:
+                        unlocked ? Colors.white : Colors.white60,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$target m',
+                  style: TextStyle(
+                    color: unlocked ? pink : Colors.white38,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 9),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 7,
+                    backgroundColor: Colors.white10,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  unlocked
+                      ? 'DÉBLOQUÉ'
+                      : '$_bestDistance / $target m',
+                  style: TextStyle(
+                    color: unlocked
+                        ? Colors.white70
+                        : Colors.white38,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
