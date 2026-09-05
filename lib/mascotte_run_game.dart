@@ -32,6 +32,21 @@ class GrenobleBackdrop extends PositionComponent {
     );
 
     add(background);
+    _fitBackground(size);
+  }
+
+  void _fitBackground(Vector2 targetSize) {
+    const imageRatio = 1774 / 887;
+
+    final fittedHeight = targetSize.y;
+    final fittedWidth = fittedHeight * imageRatio;
+
+    background
+      ..size = Vector2(fittedWidth, fittedHeight)
+      ..position = Vector2(
+        (targetSize.x - fittedWidth) / 2,
+        0,
+      );
   }
 
   @override
@@ -41,7 +56,7 @@ class GrenobleBackdrop extends PositionComponent {
     size = Vector2(newSize.x, newSize.y);
 
     if (isLoaded) {
-      background.size = Vector2(newSize.x, newSize.y);
+      _fitBackground(newSize);
     }
   }
 }
@@ -258,8 +273,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   static const double groundHeight = 90;
   static const double gravity = 1500;
   static const double jumpForce = -620;
-  static const double startSpeed = 180;
-  static const double maxSpeed = 330;
+  static const double startSpeed = 205;
+  static const double maxSpeed = 500;
 
   final Random random = Random();
 
@@ -412,8 +427,13 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     distance += 18 * dt;
 
+    final difficulty =
+        (distance / 1800).clamp(0.0, 1.0).toDouble();
+
     worldSpeed =
-        (startSpeed + distance * 0.55).clamp(startSpeed, maxSpeed).toDouble();
+        (startSpeed + distance * 0.38 + difficulty * 55)
+            .clamp(startSpeed, maxSpeed)
+            .toDouble();
 
 
     distanceText.text = 'DISTANCE  ${distance.floor()} m';
@@ -488,7 +508,12 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         obstacle.size = Vector2(34, 50);
     }
 
-    final extraGap = 170 + random.nextDouble() * 260;
+    final difficulty =
+        (distance / 1800).clamp(0.0, 1.0).toDouble();
+
+    final minGap = 170 - (difficulty * 70);
+    final randomGap = 260 - (difficulty * 120);
+    final extraGap = minGap + random.nextDouble() * randomGap;
 
     obstacle.position = Vector2(
       size.x + extraGap,
