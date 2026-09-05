@@ -192,89 +192,237 @@ class PixelObstacle extends PositionComponent {
     }
   }
 
-  void _drawCone(Canvas canvas) {
-    final orange = Paint()..color = const Color(0xFFFF7A00);
-    final white = Paint()..color = Colors.white;
-    final dark = Paint()..color = const Color(0xFF353535);
-
-    canvas.drawRect(
-      Rect.fromLTWH(2, size.y - 7, size.x - 4, 7),
-      dark,
-    );
-
-    final cone = Path()
-      ..moveTo(size.x / 2, 0)
-      ..lineTo(size.x - 5, size.y - 7)
-      ..lineTo(5, size.y - 7)
-      ..close();
-
-    canvas.drawPath(cone, orange);
+  void _drawPixelShadow(Canvas canvas, double width, double y) {
+    final shadow = Paint()..color = const Color(0x66000000);
 
     canvas.drawRect(
       Rect.fromLTWH(
-        9,
-        size.y * 0.55,
-        size.x - 18,
+        (size.x - width) / 2,
+        y,
+        width,
+        4,
+      ),
+      shadow,
+    );
+  }
+
+  void _drawCone(Canvas canvas) {
+    final outline = Paint()..color = const Color(0xFF2B2524);
+    final darkOrange = Paint()..color = const Color(0xFFC94D00);
+    final orange = Paint()..color = const Color(0xFFFF7A00);
+    final lightOrange = Paint()..color = const Color(0xFFFFA43A);
+    final white = Paint()..color = const Color(0xFFF6F3E8);
+    final base = Paint()..color = const Color(0xFF393536);
+
+    _drawPixelShadow(canvas, size.x - 2, size.y - 3);
+
+    canvas.drawRect(
+      Rect.fromLTWH(1, size.y - 9, size.x - 2, 8),
+      outline,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(4, size.y - 7, size.x - 8, 5),
+      base,
+    );
+
+    final coneOutline = Path()
+      ..moveTo(size.x / 2, 0)
+      ..lineTo(size.x - 5, size.y - 9)
+      ..lineTo(5, size.y - 9)
+      ..close();
+
+    canvas.drawPath(coneOutline, outline);
+
+    final coneBody = Path()
+      ..moveTo(size.x / 2, 4)
+      ..lineTo(size.x - 9, size.y - 11)
+      ..lineTo(9, size.y - 11)
+      ..close();
+
+    canvas.drawPath(coneBody, orange);
+
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.x * 0.30,
+        size.y * 0.42,
+        size.x * 0.40,
         7,
       ),
       white,
     );
+
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.x * 0.34,
+        size.y * 0.18,
+        4,
+        size.y * 0.18,
+      ),
+      lightOrange,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.x * 0.22,
+        size.y * 0.68,
+        size.x * 0.56,
+        5,
+      ),
+      darkOrange,
+    );
   }
 
   void _drawCrate(Canvas canvas) {
-    final brown = Paint()..color = const Color(0xFF9B5A2E);
-    final dark = Paint()..color = const Color(0xFF60361E);
-    final highlight = Paint()..color = const Color(0xFFC98246);
+    final outline = Paint()..color = const Color(0xFF3B2518);
+    final darkest = Paint()..color = const Color(0xFF5A341E);
+    final brown = Paint()..color = const Color(0xFF9F5C31);
+    final light = Paint()..color = const Color(0xFFD38A4E);
+    final highlight = Paint()..color = const Color(0xFFF0AC65);
+
+    _drawPixelShadow(canvas, size.x - 3, size.y - 3);
 
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.x, size.y),
+      outline,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(4, 4, size.x - 8, size.y - 8),
       brown,
     );
 
     canvas.drawRect(
-      Rect.fromLTWH(4, 4, size.x - 8, 5),
+      Rect.fromLTWH(5, 5, size.x - 10, 6),
+      light,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(5, size.y - 11, size.x - 10, 6),
+      darkest,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(5, 5, 6, size.y - 10),
+      darkest,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(size.x - 11, 5, 6, size.y - 10),
+      darkest,
+    );
+
+    final bracePaint = Paint()
+      ..color = const Color(0xFF6D4025)
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.square;
+
+    canvas.drawLine(
+      const Offset(10, 11),
+      Offset(size.x - 10, size.y - 11),
+      bracePaint,
+    );
+
+    canvas.drawLine(
+      Offset(size.x - 10, 11),
+      Offset(10, size.y - 11),
+      bracePaint,
+    );
+
+    canvas.drawRect(
+      const Rect.fromLTWH(8, 8, 4, 4),
       highlight,
     );
 
     canvas.drawRect(
-      Rect.fromLTWH(4, size.y - 9, size.x - 8, 5),
-      dark,
-    );
-
-    canvas.drawRect(
-      Rect.fromLTWH(size.x * 0.43, 0, 6, size.y),
-      dark,
+      Rect.fromLTWH(size.x - 13, 8, 4, 4),
+      highlight,
     );
   }
 
   void _drawBarrier(Canvas canvas) {
+    final outline = Paint()..color = const Color(0xFF27242A);
+    final pinkDark = Paint()..color = const Color(0xFF9F164D);
     final pink = Paint()..color = const Color(0xFFE91E63);
-    final white = Paint()..color = Colors.white;
-    final dark = Paint()..color = const Color(0xFF333333);
+    final pinkLight = Paint()..color = const Color(0xFFFF5A91);
+    final white = Paint()..color = const Color(0xFFF4F1F3);
+    final metal = Paint()..color = const Color(0xFF45424A);
+
+    _drawPixelShadow(canvas, size.x - 2, size.y - 3);
 
     canvas.drawRect(
-      Rect.fromLTWH(0, 4, size.x, 18),
+      Rect.fromLTWH(0, 3, size.x, 22),
+      outline,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(3, 6, size.x - 6, 16),
       pink,
     );
 
+    final stripe1 = Path()
+      ..moveTo(7, 6)
+      ..lineTo(19, 6)
+      ..lineTo(10, 22)
+      ..lineTo(3, 22)
+      ..close();
+
+    final stripe2 = Path()
+      ..moveTo(28, 6)
+      ..lineTo(40, 6)
+      ..lineTo(31, 22)
+      ..lineTo(19, 22)
+      ..close();
+
+    final stripe3 = Path()
+      ..moveTo(49, 6)
+      ..lineTo(size.x - 3, 6)
+      ..lineTo(size.x - 12, 22)
+      ..lineTo(40, 22)
+      ..close();
+
+    canvas.drawPath(stripe1, white);
+    canvas.drawPath(stripe2, white);
+    canvas.drawPath(stripe3, white);
+
     canvas.drawRect(
-      Rect.fromLTWH(8, 8, 14, 5),
-      white,
+      Rect.fromLTWH(5, 7, size.x - 10, 3),
+      pinkLight,
     );
 
     canvas.drawRect(
-      Rect.fromLTWH(32, 8, 14, 5),
-      white,
+      Rect.fromLTWH(3, 19, size.x - 6, 3),
+      pinkDark,
     );
 
     canvas.drawRect(
-      Rect.fromLTWH(8, 22, 7, size.y - 22),
-      dark,
+      Rect.fromLTWH(8, 25, 8, size.y - 25),
+      outline,
     );
 
     canvas.drawRect(
-      Rect.fromLTWH(size.x - 15, 22, 7, size.y - 22),
-      dark,
+      Rect.fromLTWH(size.x - 16, 25, 8, size.y - 25),
+      outline,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(10, 27, 4, size.y - 29),
+      metal,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(size.x - 14, 27, 4, size.y - 29),
+      metal,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(4, size.y - 6, 16, 5),
+      outline,
+    );
+
+    canvas.drawRect(
+      Rect.fromLTWH(size.x - 20, size.y - 6, 16, 5),
+      outline,
     );
   }
 }
