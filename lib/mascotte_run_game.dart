@@ -16,12 +16,20 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   late final RectangleComponent ground;
   late final SpriteComponent mascotte;
   late final TextComponent distanceText;
-  double distance = 0;
-  double worldSpeed = 180;
+  late final RectangleComponent obstacle;
+
   final List<RectangleComponent> groundMarks = [];
 
+  double distance = 0;
+  double worldSpeed = 180;
   double verticalSpeed = 0;
+
   bool onGround = true;
+  bool gameOver = false;
+
+  TextComponent? gameOverText;
+  TextComponent? finalDistanceText;
+  TextComponent? restartText;
 
   @override
   Color backgroundColor() => const Color(0xFF77C8FF);
@@ -67,13 +75,13 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     );
 
     mascotte = SpriteComponent(
-      sprite: await loadSprite("mascotte_run_frame.png"),
+      sprite: await loadSprite('mascotte_run_frame.png'),
       position: Vector2(55, size.y - groundHeight - 75),
       size: Vector2(105, 75),
     );
 
     distanceText = TextComponent(
-      text: "DISTANCE  0 m",
+      text: 'DISTANCE  0 m',
       position: Vector2(size.x - 16, 18),
       anchor: Anchor.topRight,
       textRenderer: TextPaint(
@@ -92,6 +100,15 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ),
     );
 
+    obstacle = RectangleComponent(
+      position: Vector2(
+        size.x + 160,
+        size.y - groundHeight - 54,
+      ),
+      size: Vector2(36, 54),
+      paint: Paint()..color = const Color(0xFFE91E63),
+    );
+
     addAll([
       sky,
       mountainBack,
@@ -100,6 +117,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       quay,
       ground,
       mascotte,
+      obstacle,
       distanceText,
     ]);
 
@@ -120,6 +138,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
       groundMarks.add(mark);
       add(mark);
+
       x += markWidth + gap;
     }
   }
@@ -128,8 +147,12 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   void update(double dt) {
     super.update(dt);
 
+    if (gameOver) {
+      return;
+    }
+
     distance += 18 * dt;
-    distanceText.text = "DISTANCE  ${distance.floor()} m";
+    distanceText.text = 'DISTANCE  ${distance.floor()} m';
 
     for (final mark in groundMarks) {
       mark.position.x -= worldSpeed * dt;
@@ -143,20 +166,154 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       }
     }
 
+    obstacle.position.x -= worldSpeed * dt;
+
+    if (obstacle.position.x + obstacle.size.x < 0) {
+      obstacle.position.x = size.x + 180;
+    }
+
     verticalSpeed += gravity * dt;
     mascotte.position.y += verticalSpeed * dt;
 
-    final groundY = size.y - groundHeight - mascotte.size.y;
+    final groundY =
+        size.y - groundHeight - mascotte.size.y;
 
     if (mascotte.position.y >= groundY) {
       mascotte.position.y = groundY;
       verticalSpeed = 0;
       onGround = true;
     }
+
+    if (_hasCollision()) {
+      _triggerGameOver();
+    }
+  }
+
+  bool _hasCollision() {
+    final mascotRect = Rect.fromLTWH(
+      mascotte.position.x + 20,
+      mascotte.position.y + 8,
+      mascotte.size.x - 35,
+      mascotte.size.y - 12,
+    );
+
+    final obstacleRect = Rect.fromLTWH(
+      obstacle.position.x + 3,
+      obstacle.position.y + 2,
+      obstacle.size.x - 6,
+      obstacle.size.y - 2,
+    );
+
+    return mascotRect.overlaps(obstacleRect);
+  }
+
+  void _triggerGameOver() {
+    if (gameOver) return;
+
+    gameOver = true;
+    verticalSpeed = 0;
+
+    gameOverText = TextComponent(
+      text: 'GAME OVER',
+      position: Vector2(size.x / 2, size.y * 0.34),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 36,
+          fontWeight: FontWeight.w900,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 8,
+              offset: Offset(2, 3),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    finalDistanceText = TextComponent(
+      text: '${distance.floor()} m',
+      position: Vector2(size.x / 2, size.y * 0.44),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Color(0xFFFF4081),
+          fontSize: 27,
+          fontWeight: FontWeight.w900,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 6,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    restartText = TextComponent(
+      text: 'TOUCHE POUR REJOUER',
+      position: Vector2(size.x / 2, size.y * 0.54),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 5,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    addAll([
+      gameOverText!,
+      finalDistanceText!,
+      restartText!,
+    ]);
+  }
+
+  void _restartGame() {
+    gameOverText?.removeFromParent();
+    finalDistanceText?.removeFromParent();
+    restartText?.removeFromParent();
+
+    gameOverText = null;
+    finalDistanceText = null;
+    restartText = null;
+
+    distance = 0;
+    distanceText.text = 'DISTANCE  0 m';
+
+    worldSpeed = 180;
+    verticalSpeed = 0;
+    onGround = true;
+    gameOver = false;
+
+    mascotte.position = Vector2(
+      55,
+      size.y - groundHeight - mascotte.size.y,
+    );
+
+    obstacle.position = Vector2(
+      size.x + 160,
+      size.y - groundHeight - obstacle.size.y,
+    );
   }
 
   @override
   void onTapDown(TapDownEvent event) {
+    if (gameOver) {
+      _restartGame();
+      super.onTapDown(event);
+      return;
+    }
+
     if (onGround) {
       verticalSpeed = jumpForce;
       onGround = false;
@@ -182,20 +339,29 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ..size = Vector2(newSize.x, newSize.y * 0.18);
 
     river
-      ..position = Vector2(0, newSize.y - groundHeight - 90)
+      ..position =
+          Vector2(0, newSize.y - groundHeight - 90)
       ..size = Vector2(newSize.x, 90);
 
     quay
-      ..position = Vector2(0, newSize.y - groundHeight - 30)
+      ..position =
+          Vector2(0, newSize.y - groundHeight - 30)
       ..size = Vector2(newSize.x, 30);
 
     ground
-      ..position = Vector2(0, newSize.y - groundHeight)
+      ..position =
+          Vector2(0, newSize.y - groundHeight)
       ..size = Vector2(newSize.x, groundHeight);
+
+    distanceText.position =
+        Vector2(newSize.x - 16, 18);
 
     if (onGround) {
       mascotte.position.y =
           newSize.y - groundHeight - mascotte.size.y;
     }
+
+    obstacle.position.y =
+        newSize.y - groundHeight - obstacle.size.y;
   }
 }
