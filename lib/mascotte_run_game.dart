@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -7,6 +9,10 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   static const double groundHeight = 90;
   static const double gravity = 1500;
   static const double jumpForce = -620;
+  static const double startSpeed = 180;
+  static const double maxSpeed = 330;
+
+  final Random random = Random();
 
   late final RectangleComponent sky;
   late final RectangleComponent mountainBack;
@@ -16,20 +22,28 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   late final RectangleComponent ground;
   late final SpriteComponent mascotte;
   late final TextComponent distanceText;
+  late final TextComponent ballText;
   late final RectangleComponent obstacle;
+  late final CircleComponent ball;
 
   final List<RectangleComponent> groundMarks = [];
 
   double distance = 0;
-  double worldSpeed = 180;
+  double worldSpeed = startSpeed;
   double verticalSpeed = 0;
+
+  int ballsCollected = 0;
 
   bool onGround = true;
   bool gameOver = false;
+  bool ballActive = true;
 
   TextComponent? gameOverText;
-  TextComponent? finalDistanceText;
+  TextComponent? finalStatsText;
+  TextComponent? finalScoreText;
   TextComponent? restartText;
+
+  int get score => distance.floor() + (ballsCollected * 50);
 
   @override
   Color backgroundColor() => const Color(0xFF77C8FF);
@@ -80,6 +94,25 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       size: Vector2(105, 75),
     );
 
+    obstacle = RectangleComponent(
+      position: Vector2(
+        size.x + 220,
+        size.y - groundHeight - 54,
+      ),
+      size: Vector2(36, 54),
+      paint: Paint()..color = const Color(0xFFE91E63),
+    );
+
+    ball = CircleComponent(
+      radius: 14,
+      position: Vector2(
+        size.x + 430,
+        size.y - groundHeight - 95,
+      ),
+      anchor: Anchor.center,
+      paint: Paint()..color = Colors.white,
+    );
+
     distanceText = TextComponent(
       text: 'DISTANCE  0 m',
       position: Vector2(size.x - 16, 18),
@@ -100,13 +133,23 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ),
     );
 
-    obstacle = RectangleComponent(
-      position: Vector2(
-        size.x + 160,
-        size.y - groundHeight - 54,
+    ballText = TextComponent(
+      text: 'BALLONS  0',
+      position: Vector2(16, 18),
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 5,
+              offset: Offset(1, 2),
+            ),
+          ],
+        ),
       ),
-      size: Vector2(36, 54),
-      paint: Paint()..color = const Color(0xFFE91E63),
     );
 
     addAll([
@@ -118,7 +161,9 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ground,
       mascotte,
       obstacle,
+      ball,
       distanceText,
+      ballText,
     ]);
 
     _createGroundMarks();
@@ -138,7 +183,6 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
       groundMarks.add(mark);
       add(mark);
-
       x += markWidth + gap;
     }
   }
@@ -147,11 +191,13 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   void update(double dt) {
     super.update(dt);
 
-    if (gameOver) {
-      return;
-    }
+    if (gameOver) return;
 
     distance += 18 * dt;
+
+    worldSpeed =
+        (startSpeed + distance * 0.55).clamp(startSpeed, maxSpeed).toDouble();
+
     distanceText.text = 'DISTANCE  ${distance.floor()} m';
 
     for (final mark in groundMarks) {
@@ -169,7 +215,15 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     obstacle.position.x -= worldSpeed * dt;
 
     if (obstacle.position.x + obstacle.size.x < 0) {
-      obstacle.position.x = size.x + 180;
+      _respawnObstacle();
+    }
+
+    if (ballActive) {
+      ball.position.x -= worldSpeed * dt;
+
+      if (ball.position.x + ball.radius < 0) {
+        _respawnBall();
+      }
     }
 
     verticalSpeed += gravity * dt;
@@ -184,12 +238,44 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       onGround = true;
     }
 
-    if (_hasCollision()) {
+    if (_hasObstacleCollision()) {
       _triggerGameOver();
+      return;
+    }
+
+    if (ballActive && _hasBallCollision()) {
+      ballsCollected++;
+      ballText.text = 'BALLONS  $ballsCollected';
+      ballActive = false;
+
+      ball.position.x = size.x + 1000;
+      _respawnBall();
     }
   }
 
-  bool _hasCollision() {
+  void _respawnObstacle() {
+    final extraGap = 170 + random.nextDouble() * 260;
+
+    obstacle.position = Vector2(
+      size.x + extraGap,
+      size.y - groundHeight - obstacle.size.y,
+    );
+  }
+
+  void _respawnBall() {
+    final extraGap = 260 + random.nextDouble() * 420;
+
+    final lowBall = random.nextBool();
+
+    ball.position = Vector2(
+      size.x + extraGap,
+      size.y - groundHeight - (lowBall ? 55 : 105),
+    );
+
+    ballActive = true;
+  }
+
+  bool _hasObstacleCollision() {
     final mascotRect = Rect.fromLTWH(
       mascotte.position.x + 20,
       mascotte.position.y + 8,
@@ -207,6 +293,22 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     return mascotRect.overlaps(obstacleRect);
   }
 
+  bool _hasBallCollision() {
+    final mascotRect = Rect.fromLTWH(
+      mascotte.position.x + 15,
+      mascotte.position.y + 5,
+      mascotte.size.x - 25,
+      mascotte.size.y - 10,
+    );
+
+    final ballRect = Rect.fromCircle(
+      center: Offset(ball.position.x, ball.position.y),
+      radius: ball.radius,
+    );
+
+    return mascotRect.overlaps(ballRect);
+  }
+
   void _triggerGameOver() {
     if (gameOver) return;
 
@@ -215,7 +317,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     gameOverText = TextComponent(
       text: 'GAME OVER',
-      position: Vector2(size.x / 2, size.y * 0.34),
+      position: Vector2(size.x / 2, size.y * 0.30),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -233,14 +335,33 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ),
     );
 
-    finalDistanceText = TextComponent(
-      text: '${distance.floor()} m',
-      position: Vector2(size.x / 2, size.y * 0.44),
+    finalStatsText = TextComponent(
+      text: '${distance.floor()} m  •  $ballsCollected ballon(s)',
+      position: Vector2(size.x / 2, size.y * 0.40),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 19,
+          fontWeight: FontWeight.w700,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 6,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    finalScoreText = TextComponent(
+      text: 'SCORE  $score',
+      position: Vector2(size.x / 2, size.y * 0.48),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Color(0xFFFF4081),
-          fontSize: 27,
+          fontSize: 28,
           fontWeight: FontWeight.w900,
           shadows: [
             Shadow(
@@ -254,7 +375,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     restartText = TextComponent(
       text: 'TOUCHE POUR REJOUER',
-      position: Vector2(size.x / 2, size.y * 0.54),
+      position: Vector2(size.x / 2, size.y * 0.58),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -273,27 +394,34 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     addAll([
       gameOverText!,
-      finalDistanceText!,
+      finalStatsText!,
+      finalScoreText!,
       restartText!,
     ]);
   }
 
   void _restartGame() {
     gameOverText?.removeFromParent();
-    finalDistanceText?.removeFromParent();
+    finalStatsText?.removeFromParent();
+    finalScoreText?.removeFromParent();
     restartText?.removeFromParent();
 
     gameOverText = null;
-    finalDistanceText = null;
+    finalStatsText = null;
+    finalScoreText = null;
     restartText = null;
 
     distance = 0;
-    distanceText.text = 'DISTANCE  0 m';
-
-    worldSpeed = 180;
+    ballsCollected = 0;
+    worldSpeed = startSpeed;
     verticalSpeed = 0;
+
     onGround = true;
     gameOver = false;
+    ballActive = true;
+
+    distanceText.text = 'DISTANCE  0 m';
+    ballText.text = 'BALLONS  0';
 
     mascotte.position = Vector2(
       55,
@@ -301,8 +429,13 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     );
 
     obstacle.position = Vector2(
-      size.x + 160,
+      size.x + 220,
       size.y - groundHeight - obstacle.size.y,
+    );
+
+    ball.position = Vector2(
+      size.x + 430,
+      size.y - groundHeight - 95,
     );
   }
 
@@ -353,8 +486,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
           Vector2(0, newSize.y - groundHeight)
       ..size = Vector2(newSize.x, groundHeight);
 
-    distanceText.position =
-        Vector2(newSize.x - 16, 18);
+    distanceText.position = Vector2(newSize.x - 16, 18);
 
     if (onGround) {
       mascotte.position.y =
