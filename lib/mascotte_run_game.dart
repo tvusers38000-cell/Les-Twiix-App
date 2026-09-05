@@ -7,8 +7,12 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 class GrenobleBackdrop extends PositionComponent {
-  late final SpriteComponent background;
+  late final SpriteComponent background1;
+  late final SpriteComponent background2;
+
   final Images gameImages;
+
+  double scrollSpeed = 0;
 
   GrenobleBackdrop({
     required Vector2 gameSize,
@@ -23,15 +27,25 @@ class GrenobleBackdrop extends PositionComponent {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    background = SpriteComponent(
-      sprite: Sprite(
-        await gameImages.load('mascotte_run_grenoble.png'),
-      ),
-      position: Vector2.zero(),
-      size: Vector2(size.x, size.y),
+    final sprite = Sprite(
+      await gameImages.load('mascotte_run_grenoble.png'),
     );
 
-    add(background);
+    background1 = SpriteComponent(
+      sprite: sprite,
+      position: Vector2.zero(),
+    );
+
+    background2 = SpriteComponent(
+      sprite: sprite,
+      position: Vector2.zero(),
+    );
+
+    addAll([
+      background1,
+      background2,
+    ]);
+
     _fitBackground(size);
   }
 
@@ -41,12 +55,35 @@ class GrenobleBackdrop extends PositionComponent {
     final fittedHeight = targetSize.y;
     final fittedWidth = fittedHeight * imageRatio;
 
-    background
+    background1
       ..size = Vector2(fittedWidth, fittedHeight)
-      ..position = Vector2(
-        (targetSize.x - fittedWidth) / 2,
-        0,
-      );
+      ..position = Vector2(0, 0);
+
+    background2
+      ..size = Vector2(fittedWidth, fittedHeight)
+      ..position = Vector2(fittedWidth, 0);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    if (scrollSpeed <= 0) return;
+
+    final movement = scrollSpeed * dt;
+
+    background1.position.x -= movement;
+    background2.position.x -= movement;
+
+    final width = background1.size.x;
+
+    if (background1.position.x + width <= 0) {
+      background1.position.x = background2.position.x + width;
+    }
+
+    if (background2.position.x + width <= 0) {
+      background2.position.x = background1.position.x + width;
+    }
   }
 
   @override
@@ -434,6 +471,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         (startSpeed + distance * 0.38 + difficulty * 55)
             .clamp(startSpeed, maxSpeed)
             .toDouble();
+
+    backdrop.scrollSpeed = worldSpeed * 0.15;
 
 
     distanceText.text = 'DISTANCE  ${distance.floor()} m';
