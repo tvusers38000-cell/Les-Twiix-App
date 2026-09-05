@@ -3710,6 +3710,14 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
     );
   }
 
+  void _openLeaderboard(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MascotteRunLeaderboardPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -3811,6 +3819,7 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
                             child: _MascotteMenuButton(
                               icon: Icons.leaderboard_rounded,
                               label: 'CLASSEMENT',
+                                onPressed: () => _openLeaderboard(context),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -3888,6 +3897,253 @@ class _MascotteMenuButton extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class MascotteRunLeaderboardPage extends StatelessWidget {
+  const MascotteRunLeaderboardPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+
+    final scores = FirebaseFirestore.instance
+        .collection('mascotte_run_scores')
+        .orderBy('bestDistance', descending: true)
+        .limit(50);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090D),
+      appBar: AppBar(
+        title: const Text('Classement Mascotte Run'),
+        backgroundColor: Colors.black,
+      ),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: scores.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Impossible de charger le classement pour le moment.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: pink,
+              ),
+            );
+          }
+
+          final docs = snapshot.data!.docs;
+
+          if (docs.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.emoji_events_rounded,
+                      color: pink,
+                      size: 58,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Le classement attend son premier Zin !',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Joue à La Mascotte Run pour inscrire ton record.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white60,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 28),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final doc = docs[index];
+              final data = doc.data();
+
+              final rank = index + 1;
+
+              final pseudo =
+                  (data['pseudo'] as String?)?.trim();
+
+              final displayPseudo =
+                  pseudo != null && pseudo.isNotEmpty
+                      ? pseudo
+                      : 'Membre Twiix';
+
+              final distance =
+                  (data['bestDistance'] as num?)?.toInt() ?? 0;
+
+              final bestScore =
+                  (data['bestScore'] as num?)?.toInt() ?? distance;
+
+              final isMe =
+                  currentUid != null && doc.id == currentUid;
+
+              IconData rankIcon;
+              Color rankColor;
+
+              switch (rank) {
+                case 1:
+                  rankIcon = Icons.emoji_events_rounded;
+                  rankColor = const Color(0xFFFFD54F);
+                  break;
+                case 2:
+                  rankIcon = Icons.workspace_premium_rounded;
+                  rankColor = const Color(0xFFBFC5CC);
+                  break;
+                case 3:
+                  rankIcon = Icons.workspace_premium_rounded;
+                  rankColor = const Color(0xFFCD7F32);
+                  break;
+                default:
+                  rankIcon = Icons.pets_rounded;
+                  rankColor = Colors.white38;
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: isMe
+                      ? const Color(0xFF1B1319)
+                      : const Color(0xFF121217),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isMe ? pink : Colors.white12,
+                    width: isMe ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 44,
+                      child: Column(
+                        children: [
+                          Icon(
+                            rankIcon,
+                            color: rankColor,
+                            size: rank <= 3 ? 27 : 21,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '#$rank',
+                            style: TextStyle(
+                              color: rank <= 3
+                                  ? rankColor
+                                  : Colors.white54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  displayPseudo,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              if (isMe) ...[
+                                const SizedBox(width: 7),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: pink,
+                                    borderRadius:
+                                        BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    'TOI',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Score $bestScore',
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '$distance m',
+                      style: TextStyle(
+                        color: isMe ? pink : Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

@@ -5,6 +5,8 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GrenobleBackdrop extends PositionComponent {
@@ -885,11 +887,21 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
   Future<void> _saveBestDistance() async {
     final currentDistance = distance.floor();
+    final currentScore = score;
+
     final prefs = await SharedPreferences.getInstance();
     final previousBest = prefs.getInt(bestDistanceKey) ?? 0;
 
     if (currentDistance > previousBest) {
-      await prefs.setInt(bestDistanceKey, currentDistance);
+      await prefs.setInt(
+        bestDistanceKey,
+        currentDistance,
+      );
+
+      await _saveCommunityRecord(
+        distance: currentDistance,
+        score: currentScore,
+      );
     }
 
     for (final milestone in distanceMilestones) {
@@ -899,6 +911,66 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
           true,
         );
       }
+    }
+  }
+
+  Future<void> _saveCommunityRecord({
+    required int distance,
+    required int score,
+  }) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) return;
+
+      final firestore = FirebaseFirestore.instance;
+
+      final profile =
+          await firestore.collection('users').doc(user.uid).get();
+
+      final profileData = profile.data();
+
+      final savedPseudo =
+          (profileData?['pseudo'] as String?)?.trim();
+
+      final pseudo =
+          savedPseudo != null && savedPseudo.isNotEmpty
+              ? savedPseudo
+              : (user.displayName?.trim().isNotEmpty == true
+                  ? user.displayName!.trim()
+                  : 'Membre Twiix');
+
+      final recordRef = firestore
+          .collection('mascotte_run_scores')
+          .doc(user.uid);
+
+      await firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(recordRef);
+        final data = snapshot.data();
+
+        final previousDistance =
+            (data?['bestDistance'] as num?)?.toInt() ?? 0;
+
+        if (distance <= previousDistance) {
+          return;
+        }
+
+        transaction.set(
+          recordRef,
+          {
+            'uid': user.uid,
+            'pseudo': pseudo,
+            'bestDistance': distance,
+            'bestScore': score,
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+      });
+    } catch (e) {
+      debugPrint(
+        'Mascotte Run: sauvegarde classement impossible: $e',
+      );
     }
   }
 
