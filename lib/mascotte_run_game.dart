@@ -14,7 +14,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   late final RectangleComponent river;
   late final RectangleComponent quay;
   late final RectangleComponent ground;
-  late final RectangleComponent mascotte;
+  late final SpriteComponent mascotte;
 
   double verticalSpeed = 0;
   bool onGround = true;
@@ -62,13 +62,10 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       paint: Paint()..color = const Color(0xFF4F6F3A),
     );
 
-    mascotte = RectangleComponent(
-      position: Vector2(
-        70,
-        size.y - groundHeight - 55,
-      ),
-      size: Vector2(55, 55),
-      paint: Paint()..color = const Color(0xFFFF2C7D),
+    mascotte = SpriteComponent(
+      sprite: await loadSprite("mascotte_run_frame.png"),
+      position: Vector2(55, size.y - groundHeight - 75),
+      size: Vector2(105, 75),
     );
 
     addAll([
