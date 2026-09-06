@@ -3809,6 +3809,16 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
   }
 
 
+
+  void _openStats(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MascotteRunStatsPage(),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -3933,23 +3943,48 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 36,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _openTutorial(context),
-                        icon: const Icon(
-                          Icons.sports_esports_rounded,
-                          size: 18,
-                        ),
-                        label: const Text(
-                          'COMMENT JOUER ?',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 36,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openTutorial(context),
+                              icon: const Icon(
+                                Icons.sports_esports_rounded,
+                                size: 17,
+                              ),
+                              label: const Text(
+                                'TUTO',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SizedBox(
+                            height: 36,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openStats(context),
+                              icon: const Icon(
+                                Icons.query_stats_rounded,
+                                size: 17,
+                              ),
+                              label: const Text(
+                                'STATS',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     const Text(
@@ -3971,6 +4006,264 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
   }
 }
 
+
+
+class MascotteRunStatsPage extends StatefulWidget {
+  const MascotteRunStatsPage({super.key});
+
+  @override
+  State<MascotteRunStatsPage> createState() =>
+      _MascotteRunStatsPageState();
+}
+
+class _MascotteRunStatsPageState
+    extends State<MascotteRunStatsPage> {
+  int games = 0;
+  int totalDistance = 0;
+  int bestDistance = 0;
+  int bestScore = 0;
+  int balls = 0;
+  int twiixModes = 0;
+
+  String favoriteSkin = 'Gnomi';
+  int favoriteSkinGames = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final skinStats = <String, int>{
+      'Gnomi':
+          prefs.getInt('mascotte_run_stats_skin_gnomi') ?? 0,
+      'Wendy':
+          prefs.getInt('mascotte_run_stats_skin_wendy') ?? 0,
+      'Swan':
+          prefs.getInt('mascotte_run_stats_skin_swan') ?? 0,
+      'Dean':
+          prefs.getInt('mascotte_run_stats_skin_dean') ?? 0,
+    };
+
+    var favorite = 'Gnomi';
+    var favoriteGames = skinStats['Gnomi'] ?? 0;
+
+    for (final entry in skinStats.entries) {
+      if (entry.value > favoriteGames) {
+        favorite = entry.key;
+        favoriteGames = entry.value;
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      games = prefs.getInt('mascotte_run_stats_games') ?? 0;
+      totalDistance =
+          prefs.getInt('mascotte_run_stats_distance') ?? 0;
+      bestDistance =
+          prefs.getInt('mascotte_run_best_distance') ?? 0;
+      bestScore =
+          prefs.getInt('mascotte_run_stats_best_score') ?? 0;
+      balls =
+          prefs.getInt('mascotte_run_stats_balls') ?? 0;
+      twiixModes =
+          prefs.getInt('mascotte_run_stats_twiix_modes') ?? 0;
+
+      favoriteSkin = favorite;
+      favoriteSkinGames = favoriteGames;
+    });
+  }
+
+  Widget _statCard({
+    required IconData icon,
+    required String value,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: cardDecoration(),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: pink,
+            size: 27,
+          ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white60,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final averageDistance =
+        games == 0 ? 0 : (totalDistance / games).round();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090D),
+      appBar: AppBar(
+        title: const Text('Stats Mascotte Run'),
+        backgroundColor: Colors.black,
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Icon(
+              Icons.query_stats_rounded,
+              color: pink,
+              size: 48,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'TA CARRIÈRE',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Toutes tes aventures dans La Mascotte Run',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white60,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1.35,
+              children: [
+                _statCard(
+                  icon: Icons.sports_esports_rounded,
+                  value: '$games',
+                  label: 'PARTIES JOUÉES',
+                ),
+                _statCard(
+                  icon: Icons.emoji_events_rounded,
+                  value: '$bestDistance m',
+                  label: 'RECORD',
+                ),
+                _statCard(
+                  icon: Icons.route_rounded,
+                  value: '$totalDistance m',
+                  label: 'DISTANCE TOTALE',
+                ),
+                _statCard(
+                  icon: Icons.speed_rounded,
+                  value: '$averageDistance m',
+                  label: 'MOYENNE / PARTIE',
+                ),
+                _statCard(
+                  icon: Icons.stars_rounded,
+                  value: '$bestScore',
+                  label: 'MEILLEUR SCORE',
+                ),
+                _statCard(
+                  icon: Icons.sports_soccer_rounded,
+                  value: '$balls',
+                  label: 'BALLONS RAMASSÉS',
+                ),
+                _statCard(
+                  icon: Icons.auto_awesome_rounded,
+                  value: '$twiixModes',
+                  label: 'MODES TWIIX',
+                ),
+                _statCard(
+                  icon: Icons.pets_rounded,
+                  value: favoriteSkinGames == 0
+                      ? '—'
+                      : favoriteSkin,
+                  label: 'MASCOTTE FAVORITE',
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 18),
+
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: cardDecoration(),
+              child: const Column(
+                children: [
+                  Icon(
+                    Icons.workspace_premium_rounded,
+                    color: pink,
+                    size: 30,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Continue de courir !',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Chaque partie fait progresser tes statistiques.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white60,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            const Text(
+              'Trois, deux, Zin !',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white60,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class MascotteRunTutorialPage extends StatelessWidget {
   const MascotteRunTutorialPage({super.key});

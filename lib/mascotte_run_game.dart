@@ -1698,6 +1698,50 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       final prefs = await SharedPreferences.getInstance();
       final previousBest = prefs.getInt(bestDistanceKey) ?? 0;
 
+      // Statistiques de carrière Mascotte Run.
+      final careerGames =
+          prefs.getInt('mascotte_run_stats_games') ?? 0;
+      final careerDistance =
+          prefs.getInt('mascotte_run_stats_distance') ?? 0;
+      final careerBalls =
+          prefs.getInt('mascotte_run_stats_balls') ?? 0;
+      final previousBestScore =
+          prefs.getInt('mascotte_run_stats_best_score') ?? 0;
+      final careerModes =
+          prefs.getInt('mascotte_run_stats_twiix_modes') ?? 0;
+
+      await prefs.setInt(
+        'mascotte_run_stats_games',
+        careerGames + 1,
+      );
+      await prefs.setInt(
+        'mascotte_run_stats_distance',
+        careerDistance + currentDistance,
+      );
+      await prefs.setInt(
+        'mascotte_run_stats_balls',
+        careerBalls + currentBalls,
+      );
+
+      if (currentScore > previousBestScore) {
+        await prefs.setInt(
+          'mascotte_run_stats_best_score',
+          currentScore,
+        );
+      }
+
+      if (_modeTwiixTriggered) {
+        await prefs.setInt(
+          'mascotte_run_stats_twiix_modes',
+          careerModes + 1,
+        );
+      }
+
+      final skinStatKey =
+          'mascotte_run_stats_skin_$skinId';
+      final skinGames = prefs.getInt(skinStatKey) ?? 0;
+      await prefs.setInt(skinStatKey, skinGames + 1);
+
       final isNewRecord = currentDistance > previousBest;
       final bestDistance =
           isNewRecord ? currentDistance : previousBest;
