@@ -4675,7 +4675,7 @@ class _MascotteRunBadgesPageState
     final unlockedCount = _distanceBadges
         .where(
           (badge) =>
-              _bestDistance >= badge['target'] as int,
+              _bestDistance >= (badge['target'] as int),
         )
         .length;
 
