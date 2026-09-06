@@ -458,6 +458,47 @@ class CollectParticle extends CircleComponent {
   }
 }
 
+class FloatingScoreText extends TextComponent {
+  double life = 0.7;
+
+  FloatingScoreText({
+    required Vector2 position,
+    required String text,
+  }) : super(
+          text: text,
+          position: position,
+          anchor: Anchor.center,
+          priority: 60,
+          textRenderer: TextPaint(
+            style: const TextStyle(
+              color: Color(0xFFFF4081),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              shadows: [
+                Shadow(
+                  color: Colors.black,
+                  blurRadius: 5,
+                  offset: Offset(1, 2),
+                ),
+              ],
+            ),
+          ),
+        );
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    life -= dt;
+    position.y -= 55 * dt;
+    scale += Vector2.all(0.35 * dt);
+
+    if (life <= 0) {
+      removeFromParent();
+    }
+  }
+}
+
 class MascotteRunGame extends FlameGame with TapCallbacks {
   final String skinId;
   final bool soundEnabled;
@@ -528,6 +569,10 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   double distance = 0;
   double worldSpeed = startSpeed;
   double verticalSpeed = 0;
+
+  double _runAnimationTime = 0;
+  double _landingEffect = 0;
+  double _impactEffect = 0;
 
   int ballsCollected = 0;
 
@@ -670,7 +715,26 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   void update(double dt) {
     super.update(dt);
 
-    if (gameOver) return;
+    if (gameOver) {
+      if (_impactEffect > 0) {
+        _impactEffect -= dt;
+
+        final shake =
+            ((_impactEffect * 55).floor().isEven)
+                ? 1.0
+                : -1.0;
+
+        mascotte.angle = 0.05 * shake;
+        obstacle.angle = -0.035 * shake;
+      } else {
+        mascotte.angle = 0;
+        obstacle.angle = 0;
+      }
+
+      return;
+    }
+
+    _runAnimationTime += dt;
 
     distance += 18 * dt;
 
@@ -708,6 +772,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     if (ballActive) {
       ball.position.x -= worldSpeed * dt;
 
+      ball.angle += dt * (3.5 + worldSpeed / 140);
+
       if (ball.position.x + ball.radius < 0) {
         _respawnBall();
       }
@@ -719,10 +785,50 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     final groundY =
         size.y - groundHeight - mascotte.size.y;
 
+    final wasInAir = !onGround;
+
     if (mascotte.position.y >= groundY) {
       mascotte.position.y = groundY;
       verticalSpeed = 0;
       onGround = true;
+
+      if (wasInAir) {
+        _landingEffect = 0.16;
+      }
+    }
+
+    if (onGround) {
+      final runPhase =
+          ((_runAnimationTime * (7 + worldSpeed / 80)).floor())
+                  .isEven
+              ? 1.0
+              : -1.0;
+
+      if (_landingEffect > 0) {
+        _landingEffect -= dt;
+
+        mascotte.scale = Vector2(
+          1.06,
+          0.92,
+        );
+        mascotte.angle = 0;
+      } else {
+        mascotte.scale = Vector2(
+          1.0,
+          1.0 + (runPhase * 0.025),
+        );
+        mascotte.angle = runPhase * 0.012;
+      }
+    } else {
+      mascotte.scale = Vector2(
+        1.0,
+        0.96,
+      );
+
+      mascotte.angle =
+          verticalSpeed < 0
+              ? -0.06
+              : 0.045;
     }
 
     if (_hasObstacleCollision()) {
@@ -740,6 +846,16 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       );
 
       _spawnBallParticles();
+
+      add(
+        FloatingScoreText(
+          position: Vector2(
+            ball.position.x,
+            ball.position.y - 24,
+          ),
+          text: '+50',
+        ),
+      );
 
       ballActive = false;
       ball.position.x = size.x + 1000;
@@ -785,6 +901,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       size.y - groundHeight - (lowBall ? 55 : 105),
     );
 
+    ball.angle = 0;
     ballActive = true;
   }
 
@@ -795,7 +912,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       Color(0xFFFFD54F),
     ];
 
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 10; i++) {
       final particle = CollectParticle(
         position: Vector2(
           ball.position.x + random.nextDouble() * 20 - 10,
@@ -847,6 +964,9 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     gameOver = true;
     verticalSpeed = 0;
+    _impactEffect = 0.28;
+
+    mascotte.scale = Vector2.all(1.0);
 
     _playSfx(
       'mascotte_collision.wav',
@@ -1053,6 +1173,15 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     ballsCollected = 0;
     worldSpeed = startSpeed;
     verticalSpeed = 0;
+
+    _runAnimationTime = 0;
+    _landingEffect = 0;
+    _impactEffect = 0;
+
+    mascotte.scale = Vector2.all(1.0);
+    mascotte.angle = 0;
+    obstacle.angle = 0;
+    ball.angle = 0;
 
     onGround = true;
     gameOver = false;
