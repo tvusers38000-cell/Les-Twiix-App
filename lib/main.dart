@@ -4503,6 +4503,7 @@ class MascotteRunBadgesPage extends StatefulWidget {
 class _MascotteRunBadgesPageState
     extends State<MascotteRunBadgesPage> {
   int _bestDistance = 0;
+  Set<String> _unlockedLegendary = <String>{};
 
   static const List<Map<String, dynamic>> _distanceBadges = [
     {
@@ -4539,20 +4540,23 @@ class _MascotteRunBadgesPageState
 
   static const List<Map<String, dynamic>> _legendaryBadges = [
     {
+      'key': 'mascotte_run_legend_queen_wendy',
       'title': 'Queen Wendy',
-      'subtitle': 'Badge légendaire',
+      'subtitle': 'Atteins 1 500 m avec Wendy',
       'asset':
           'assets/images/badges/mascotte_run/queen_wendy.png',
     },
     {
+      'key': 'mascotte_run_legend_swan_fusee',
       'title': 'Swan La Fusée',
-      'subtitle': 'Badge légendaire',
+      'subtitle': 'Atteins 3 000 m avec Swan',
       'asset':
           'assets/images/badges/mascotte_run/swan_la_fusee.png',
     },
     {
+      'key': 'mascotte_run_legend_dean_sage',
       'title': 'Dean Le Sage',
-      'subtitle': 'Badge légendaire',
+      'subtitle': 'Atteins 5 000 m avec Dean',
       'asset':
           'assets/images/badges/mascotte_run/dean_le_sage.png',
     },
@@ -4570,10 +4574,25 @@ class _MascotteRunBadgesPageState
     final best =
         prefs.getInt('mascotte_run_best_distance') ?? 0;
 
+    final legendary = <String>{};
+
+    const legendaryKeys = [
+      'mascotte_run_legend_queen_wendy',
+      'mascotte_run_legend_swan_fusee',
+      'mascotte_run_legend_dean_sage',
+    ];
+
+    for (final key in legendaryKeys) {
+      if (prefs.getBool(key) == true) {
+        legendary.add(key);
+      }
+    }
+
     if (!mounted) return;
 
     setState(() {
       _bestDistance = best;
+      _unlockedLegendary = legendary;
     });
   }
 
@@ -4968,19 +4987,21 @@ class _MascotteRunBadgesPageState
   Widget _buildLegendaryBadge(
     Map<String, dynamic> badge,
   ) {
+    final key = badge['key'] as String;
     final title = badge['title'] as String;
     final asset = badge['asset'] as String;
     final subtitle = badge['subtitle'] as String;
 
-    const unlocked = false;
+    final unlocked = _unlockedLegendary.contains(key);
 
     return GestureDetector(
       onTap: () => _openBadge(
         asset: asset,
         title: title,
         unlocked: unlocked,
-        subtitle:
-            'Condition de déblocage légendaire à découvrir',
+        subtitle: unlocked
+            ? 'Badge légendaire débloqué'
+            : subtitle,
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),

@@ -1300,6 +1300,27 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         );
       }
     }
+
+    if (skinId == 'wendy' && currentDistance >= 1500) {
+      await prefs.setBool(
+        'mascotte_run_legend_queen_wendy',
+        true,
+      );
+    }
+
+    if (skinId == 'swan' && currentDistance >= 3000) {
+      await prefs.setBool(
+        'mascotte_run_legend_swan_fusee',
+        true,
+      );
+    }
+
+    if (skinId == 'dean' && currentDistance >= 5000) {
+      await prefs.setBool(
+        'mascotte_run_legend_dean_sage',
+        true,
+      );
+    }
   }
 
   Future<void> _saveCommunityRecord({
