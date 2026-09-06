@@ -11,6 +11,7 @@ import 'live_presence_reward.dart';
 import 'loyal_qg_reward.dart';
 import 'polls_10_reward.dart';
 import 'package:flame/game.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'mascotte_run_game.dart';
 
 
@@ -4673,29 +4674,113 @@ class MascotteRunPlayPage extends StatefulWidget {
 }
 
 class _MascotteRunPlayPageState
-    extends State<MascotteRunPlayPage> {
+    extends State<MascotteRunPlayPage>
+    with WidgetsBindingObserver {
+  static const String _soundPreferenceKey =
+      'mascotte_run_sound_enabled';
+
+  final AudioPlayer _musicPlayer = AudioPlayer();
+
   MascotteRunGame? _game;
+  bool _soundEnabled = true;
+  bool _pausedByLifecycle = false;
 
   @override
   void initState() {
     super.initState();
-    _loadEquippedSkin();
+    WidgetsBinding.instance.addObserver(this);
+    _loadGameSettings();
   }
 
-  Future<void> _loadEquippedSkin() async {
+  Future<void> _loadGameSettings() async {
     final prefs = await SharedPreferences.getInstance();
 
     final skinId =
         prefs.getString('mascotte_run_equipped_skin')
             ?? 'gnomi';
 
+    final soundEnabled =
+        prefs.getBool(_soundPreferenceKey) ?? true;
+
     if (!mounted) return;
 
     setState(() {
+      _soundEnabled = soundEnabled;
       _game = MascotteRunGame(
         skinId: skinId,
       );
     });
+
+    if (soundEnabled) {
+      await _startMusic();
+    }
+  }
+
+  Future<void> _startMusic() async {
+    try {
+      await _musicPlayer.setReleaseMode(
+        ReleaseMode.loop,
+      );
+      await _musicPlayer.setVolume(0.32);
+
+      await _musicPlayer.play(
+        AssetSource(
+          'audio/mascotte_run_music.ogg',
+        ),
+      );
+    } catch (error) {
+      debugPrint(
+        'Mascotte Run audio error: $error',
+      );
+    }
+  }
+
+  Future<void> _toggleSound() async {
+    final newValue = !_soundEnabled;
+
+    setState(() {
+      _soundEnabled = newValue;
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool(
+      _soundPreferenceKey,
+      newValue,
+    );
+
+    if (newValue) {
+      await _startMusic();
+    } else {
+      await _musicPlayer.stop();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(
+    AppLifecycleState state,
+  ) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      if (_soundEnabled) {
+        _pausedByLifecycle = true;
+        _musicPlayer.pause();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      if (_soundEnabled && _pausedByLifecycle) {
+        _pausedByLifecycle = false;
+        _musicPlayer.resume();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _musicPlayer.stop();
+    _musicPlayer.dispose();
+    super.dispose();
   }
 
   @override
@@ -4726,6 +4811,21 @@ class _MascotteRunPlayPageState
                           Navigator.pop(context),
                       icon: const Icon(
                         Icons.arrow_back_rounded,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: IconButton.filledTonal(
+                      tooltip: _soundEnabled
+                          ? 'Couper la musique'
+                          : 'Activer la musique',
+                      onPressed: _toggleSound,
+                      icon: Icon(
+                        _soundEnabled
+                            ? Icons.volume_up_rounded
+                            : Icons.volume_off_rounded,
                       ),
                     ),
                   ),

@@ -17,6 +17,7 @@ dependencies:
   timezone: ^0.10.1
   flutter_timezone: ^5.1.0
   flame: ^1.32.0
+  audioplayers: 6.4.0
 
 flutter:
   uses-material-design: true
@@ -33,3 +34,4 @@ flutter:
     - assets/images/mascotte_run_dean.png
     - assets/images/planning_source.jpeg
     - assets/images/badges/
+    - assets/audio/mascotte_run_music.ogg
