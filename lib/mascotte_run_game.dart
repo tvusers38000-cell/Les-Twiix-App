@@ -610,6 +610,23 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
   final Set<int> _triggeredEvents = {};
 
+  double _nextTwiixEventDistance = 650;
+  double _zinBoostTimer = 0;
+  double _ballRainTimer = 0;
+  double _twiixModeTimer = 0;
+  double _twiixVisualTimer = 0;
+  double _modeBonusDistance = 0;
+
+  int _twiixEventCount = 0;
+  int _extraBallScore = 0;
+  int _visibleTwiixEvent = 0;
+
+  late final SpriteComponent twiixGauche;
+  late final SpriteComponent twiixDroit;
+
+  bool get _twiixInvincible =>
+      _zinBoostTimer > 0 || _twiixModeTimer > 0;
+
   int ballsCollected = 0;
 
   bool onGround = true;
@@ -631,7 +648,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     5000,
   ];
 
-  int get score => distance.floor() + (ballsCollected * 50);
+  int get score =>
+      distance.floor() +
+      (ballsCollected * 50) +
+      _extraBallScore +
+      _modeBonusDistance.floor();
 
   @override
   Color backgroundColor() => const Color(0xFF69B9E8);
@@ -656,6 +677,45 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       position: Vector2(55, size.y - groundHeight - 75),
       size: Vector2(105, 75),
       priority: 20,
+    );
+
+    final twiixImage =
+        await images.load('mascotte_run_twiix.png');
+
+    final halfTwiixWidth =
+        twiixImage.width.toDouble() / 2;
+
+    twiixGauche = SpriteComponent(
+      sprite: Sprite(
+        twiixImage,
+        srcPosition: Vector2.zero(),
+        srcSize: Vector2(
+          halfTwiixWidth,
+          twiixImage.height.toDouble(),
+        ),
+      ),
+      position: Vector2(-500, size.y - groundHeight),
+      size: Vector2(112, 150),
+      anchor: Anchor.bottomCenter,
+      priority: 42,
+    );
+
+    twiixDroit = SpriteComponent(
+      sprite: Sprite(
+        twiixImage,
+        srcPosition: Vector2(
+          halfTwiixWidth,
+          0,
+        ),
+        srcSize: Vector2(
+          halfTwiixWidth,
+          twiixImage.height.toDouble(),
+        ),
+      ),
+      position: Vector2(-500, size.y - groundHeight),
+      size: Vector2(112, 150),
+      anchor: Anchor.bottomCenter,
+      priority: 42,
     );
 
     obstacle = PixelObstacle(
@@ -722,6 +782,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       backdrop,
       ground,
       mascotte,
+      twiixGauche,
+      twiixDroit,
       obstacle,
       ball,
       atmosphereOverlay,
@@ -777,7 +839,16 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     _runAnimationTime += dt;
 
-    distance += 18 * dt;
+    final distanceStep = 18 * dt;
+
+    distance += distanceStep *
+        (_zinBoostTimer > 0 ? 1.35 : 1.0);
+
+    if (_twiixModeTimer > 0) {
+      _modeBonusDistance += distanceStep;
+    }
+
+    _updateTwiixEvents(dt);
 
     final difficulty =
         (distance / 1800).clamp(0.0, 1.0).toDouble();
@@ -787,14 +858,17 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
             .clamp(startSpeed, maxSpeed)
             .toDouble();
 
-    backdrop.scrollSpeed = worldSpeed * 0.15;
+    final effectiveWorldSpeed =
+        worldSpeed * (_zinBoostTimer > 0 ? 1.22 : 1.0);
+
+    backdrop.scrollSpeed = effectiveWorldSpeed * 0.15;
 
     _updateRunEvents(dt);
 
     distanceText.text = 'DISTANCE  ${distance.floor()} m';
 
     for (final mark in groundMarks) {
-      mark.position.x -= worldSpeed * dt;
+      mark.position.x -= effectiveWorldSpeed * dt;
 
       if (mark.position.x + mark.size.x < 0) {
         final rightmost = groundMarks
@@ -805,14 +879,14 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       }
     }
 
-    obstacle.position.x -= worldSpeed * dt;
+    obstacle.position.x -= effectiveWorldSpeed * dt;
 
     if (obstacle.position.x + obstacle.size.x < 0) {
       _respawnObstacle();
     }
 
     if (ballActive) {
-      ball.position.x -= worldSpeed * dt;
+      ball.position.x -= effectiveWorldSpeed * dt;
 
       ball.angle += dt * (3.5 + worldSpeed / 140);
 
@@ -874,13 +948,55 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     }
 
     if (_hasObstacleCollision()) {
-      _triggerGameOver();
-      return;
+      if (_twiixInvincible) {
+        _respawnObstacle();
+
+        _impactEffect = 0.10;
+
+        add(
+          FloatingScoreText(
+            position: Vector2(
+              mascotte.position.x + 60,
+              mascotte.position.y - 8,
+            ),
+            text: 'ZIN !',
+          ),
+        );
+
+        for (int i = 0; i < 8; i++) {
+          add(
+            CollectParticle(
+              position: Vector2(
+                mascotte.position.x +
+                    random.nextDouble() * 80,
+                mascotte.position.y +
+                    random.nextDouble() * 50,
+              ),
+              color: const Color(0xFFFF4081),
+            )..priority = 40,
+          );
+        }
+      } else {
+        _triggerGameOver();
+        return;
+      }
     }
 
     if (ballActive && _hasBallCollision()) {
       ballsCollected++;
       ballText.text = '⚽  $ballsCollected';
+
+      int gainedPoints = 50;
+
+      if (_ballRainTimer > 0) {
+        gainedPoints += 50;
+      }
+
+      if (_twiixModeTimer > 0) {
+        gainedPoints *= 2;
+      }
+
+      _extraBallScore += gainedPoints - 50;
 
       _playSfx(
         'mascotte_ball.wav',
@@ -895,7 +1011,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
             ball.position.x,
             ball.position.y - 24,
           ),
-          text: '+50',
+          text: '+$gainedPoints',
         ),
       );
 
@@ -903,6 +1019,248 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ball.position.x = size.x + 1000;
 
       _respawnBall();
+    }
+  }
+
+  void _updateTwiixEvents(double dt) {
+    if (_zinBoostTimer > 0) {
+      _zinBoostTimer -= dt;
+    }
+
+    if (_ballRainTimer > 0) {
+      _ballRainTimer -= dt;
+    }
+
+    if (_twiixModeTimer > 0) {
+      _twiixModeTimer -= dt;
+    }
+
+    if (_twiixVisualTimer > 0) {
+      _twiixVisualTimer -= dt;
+
+      final bounce =
+          ((_runAnimationTime * 7).floor().isEven)
+              ? 0.0
+              : 4.0;
+
+      final baseY = size.y - groundHeight + bounce;
+
+      if (_visibleTwiixEvent == 1) {
+        twiixGauche.position = Vector2(
+          size.x - 78,
+          baseY,
+        );
+      } else if (_visibleTwiixEvent == 2) {
+        twiixDroit.position = Vector2(
+          size.x - 78,
+          baseY,
+        );
+      } else if (_visibleTwiixEvent == 3) {
+        twiixGauche.position = Vector2(
+          size.x - 142,
+          baseY,
+        );
+
+        twiixDroit.position = Vector2(
+          size.x - 54,
+          baseY,
+        );
+      }
+    } else if (_visibleTwiixEvent != 0) {
+      _hideTwiix();
+    }
+
+    if (distance >= _nextTwiixEventDistance) {
+      _triggerNextTwiixEvent();
+    }
+  }
+
+  void _triggerNextTwiixEvent() {
+    if (_twiixEventCount == 0) {
+      _activateTwiixGauche();
+    } else if (_twiixEventCount == 1) {
+      _activateTwiixDroit();
+    } else if (_twiixEventCount == 2) {
+      _activateModeTwiix();
+    } else {
+      final roll = random.nextInt(5);
+
+      if (roll <= 1) {
+        _activateTwiixGauche();
+      } else if (roll <= 3) {
+        _activateTwiixDroit();
+      } else {
+        _activateModeTwiix();
+      }
+    }
+
+    _twiixEventCount++;
+
+    final extraDistance =
+        _twiixEventCount <= 3
+            ? 850.0
+            : 900.0 + random.nextDouble() * 500;
+
+    _nextTwiixEventDistance =
+        distance + extraDistance;
+  }
+
+  void _activateTwiixGauche() {
+    _visibleTwiixEvent = 1;
+    _twiixVisualTimer = 3.2;
+    _zinBoostTimer = 6.0;
+
+    _showTwiixBanner(
+      'TWIIX GAUCHE',
+      'BOOST ZIN !',
+      const Color(0xFF42A5F5),
+    );
+
+    _spawnTwiixParticles(
+      const Color(0xFF42A5F5),
+    );
+  }
+
+  void _activateTwiixDroit() {
+    _visibleTwiixEvent = 2;
+    _twiixVisualTimer = 3.2;
+    _ballRainTimer = 8.0;
+
+    _showTwiixBanner(
+      'TWIIX DROIT',
+      'PLUIE DE BALLONS !',
+      const Color(0xFFE53935),
+    );
+
+    _spawnTwiixParticles(
+      const Color(0xFFE53935),
+    );
+
+    _respawnBall();
+  }
+
+  void _activateModeTwiix() {
+    _visibleTwiixEvent = 3;
+    _twiixVisualTimer = 4.0;
+    _twiixModeTimer = 10.0;
+
+    if (_zinBoostTimer < 7.0) {
+      _zinBoostTimer = 7.0;
+    }
+
+    if (_ballRainTimer < 10.0) {
+      _ballRainTimer = 10.0;
+    }
+
+    _showTwiixBanner(
+      'MODE TWIIX ×2',
+      '3, 2, ZIN !',
+      const Color(0xFFFFD700),
+    );
+
+    _spawnTwiixParticles(
+      const Color(0xFFFFD700),
+      count: 28,
+    );
+
+    _respawnBall();
+  }
+
+  void _hideTwiix() {
+    _visibleTwiixEvent = 0;
+
+    twiixGauche.position.x = -500;
+    twiixDroit.position.x = -500;
+  }
+
+  void _showTwiixBanner(
+    String title,
+    String subtitle,
+    Color color,
+  ) {
+    final titleComponent = TextComponent(
+      text: title,
+      position: Vector2(
+        size.x / 2,
+        size.y * 0.20,
+      ),
+      anchor: Anchor.center,
+      priority: 110,
+      textRenderer: TextPaint(
+        style: TextStyle(
+          color: color,
+          fontSize: 28,
+          fontWeight: FontWeight.w900,
+          shadows: const [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 8,
+              offset: Offset(2, 3),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final subtitleComponent = TextComponent(
+      text: subtitle,
+      position: Vector2(
+        size.x / 2,
+        size.y * 0.27,
+      ),
+      anchor: Anchor.center,
+      priority: 110,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w900,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 7,
+              offset: Offset(1, 2),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    addAll([
+      titleComponent,
+      subtitleComponent,
+    ]);
+
+    Future<void>.delayed(
+      const Duration(milliseconds: 2200),
+      () {
+        if (titleComponent.isMounted) {
+          titleComponent.removeFromParent();
+        }
+
+        if (subtitleComponent.isMounted) {
+          subtitleComponent.removeFromParent();
+        }
+      },
+    );
+  }
+
+  void _spawnTwiixParticles(
+    Color color, {
+    int count = 16,
+  }) {
+    for (int i = 0; i < count; i++) {
+      add(
+        CollectParticle(
+          position: Vector2(
+            size.x * 0.20 +
+                random.nextDouble() * size.x * 0.75,
+            size.y * 0.15 +
+                random.nextDouble() * size.y * 0.55,
+          ),
+          color: color,
+        )..priority = 100,
+      );
     }
   }
 
@@ -1096,7 +1454,9 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   }
 
   void _respawnBall() {
-    final extraGap = 260 + random.nextDouble() * 420;
+    final extraGap = _ballRainTimer > 0
+        ? 90 + random.nextDouble() * 150
+        : 260 + random.nextDouble() * 420;
 
     final lowBall = random.nextBool();
 
@@ -1396,6 +1756,20 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     distance = 0;
     ballsCollected = 0;
+
+    _extraBallScore = 0;
+    _modeBonusDistance = 0;
+
+    _zinBoostTimer = 0;
+    _ballRainTimer = 0;
+    _twiixModeTimer = 0;
+    _twiixVisualTimer = 0;
+
+    _twiixEventCount = 0;
+    _visibleTwiixEvent = 0;
+    _nextTwiixEventDistance = 650;
+
+    _hideTwiix();
     worldSpeed = startSpeed;
     verticalSpeed = 0;
 
