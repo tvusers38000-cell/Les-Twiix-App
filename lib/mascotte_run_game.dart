@@ -458,6 +458,38 @@ class CollectParticle extends CircleComponent {
   }
 }
 
+class RunAtmosphereOverlay extends PositionComponent {
+  double opacity = 0;
+  Color color = Colors.transparent;
+
+  RunAtmosphereOverlay({
+    required Vector2 size,
+  }) : super(
+          size: size,
+          priority: 40,
+        );
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+
+    if (opacity <= 0) return;
+
+    canvas.drawRect(
+      Rect.fromLTWH(
+        0,
+        0,
+        size.x,
+        size.y,
+      ),
+      Paint()
+        ..color = color.withValues(
+          alpha: opacity.clamp(0.0, 1.0),
+        ),
+    );
+  }
+}
+
 class FloatingScoreText extends TextComponent {
   double life = 0.7;
 
@@ -563,6 +595,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   late final TextComponent ballText;
   late final PixelObstacle obstacle;
   late final PixelFootball ball;
+  late final RunAtmosphereOverlay atmosphereOverlay;
 
   final List<RectangleComponent> groundMarks = [];
 
@@ -573,6 +606,9 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   double _runAnimationTime = 0;
   double _landingEffect = 0;
   double _impactEffect = 0;
+  double _eventParticleTimer = 0;
+
+  final Set<int> _triggeredEvents = {};
 
   int ballsCollected = 0;
 
@@ -637,6 +673,10 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ),
     )..priority = 15;
 
+    atmosphereOverlay = RunAtmosphereOverlay(
+      size: Vector2(size.x, size.y),
+    );
+
     distanceText = TextComponent(
       text: 'DISTANCE  0 m',
       position: Vector2(size.x - 16, 18),
@@ -684,6 +724,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       mascotte,
       obstacle,
       ball,
+      atmosphereOverlay,
       distanceText,
       ballText,
     ]);
@@ -748,6 +789,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     backdrop.scrollSpeed = worldSpeed * 0.15;
 
+    _updateRunEvents(dt);
 
     distanceText.text = 'DISTANCE  ${distance.floor()} m';
 
@@ -861,6 +903,168 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ball.position.x = size.x + 1000;
 
       _respawnBall();
+    }
+  }
+
+  void _updateRunEvents(double dt) {
+    final meters = distance.floor();
+
+    if (meters >= 500) {
+      _triggerDistanceEvent(
+        500,
+        'ÇA ACCÉLÈRE !',
+        const Color(0xFFFFD54F),
+      );
+    }
+
+    if (meters >= 1000) {
+      _triggerDistanceEvent(
+        1000,
+        'COUCHER DE SOLEIL',
+        const Color(0xFFFFA65A),
+      );
+    }
+
+    if (meters >= 2000) {
+      _triggerDistanceEvent(
+        2000,
+        'MODE ZIN !',
+        const Color(0xFFFF4081),
+      );
+    }
+
+    if (meters >= 3500) {
+      _triggerDistanceEvent(
+        3500,
+        'GRENOBLE BY NIGHT',
+        const Color(0xFF90CAF9),
+      );
+    }
+
+    if (meters >= 5000) {
+      _triggerDistanceEvent(
+        5000,
+        'KING GNOMI',
+        const Color(0xFFFFD700),
+      );
+    }
+
+    if (meters < 1000) {
+      atmosphereOverlay
+        ..color = Colors.transparent
+        ..opacity = 0;
+    } else if (meters < 3500) {
+      final progress =
+          ((meters - 1000) / 2500)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      atmosphereOverlay
+        ..color = const Color(0xFFFF7A45)
+        ..opacity = 0.04 + progress * 0.06;
+    } else {
+      final progress =
+          ((meters - 3500) / 1500)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      atmosphereOverlay
+        ..color = const Color(0xFF07132E)
+        ..opacity = 0.14 + progress * 0.10;
+    }
+
+    if (meters >= 2000) {
+      _eventParticleTimer -= dt;
+
+      if (_eventParticleTimer <= 0) {
+        _eventParticleTimer =
+            meters >= 5000 ? 0.08 : 0.22;
+
+        final colors = meters >= 5000
+            ? const [
+                Color(0xFFFFD700),
+                Color(0xFFFF4081),
+                Colors.white,
+              ]
+            : const [
+                Color(0xFFFF4081),
+                Color(0xFF42A5F5),
+                Colors.white,
+              ];
+
+        add(
+          CollectParticle(
+            position: Vector2(
+              random.nextDouble() * size.x,
+              size.y * 0.35 +
+                  random.nextDouble() * size.y * 0.45,
+            ),
+            color: colors[
+                random.nextInt(colors.length)],
+          )..priority = 35,
+        );
+      }
+    }
+  }
+
+  void _triggerDistanceEvent(
+    int milestone,
+    String text,
+    Color color,
+  ) {
+    if (_triggeredEvents.contains(milestone)) {
+      return;
+    }
+
+    _triggeredEvents.add(milestone);
+
+    final banner = TextComponent(
+      text: text,
+      position: Vector2(
+        size.x / 2,
+        size.y * 0.22,
+      ),
+      anchor: Anchor.center,
+      priority: 90,
+      textRenderer: TextPaint(
+        style: TextStyle(
+          color: color,
+          fontSize: milestone >= 5000 ? 30 : 24,
+          fontWeight: FontWeight.w900,
+          shadows: const [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 8,
+              offset: Offset(2, 3),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    add(banner);
+
+    Future<void>.delayed(
+      const Duration(milliseconds: 1700),
+      () {
+        if (banner.isMounted) {
+          banner.removeFromParent();
+        }
+      },
+    );
+
+    for (int i = 0; i < (milestone >= 5000 ? 24 : 10); i++) {
+      add(
+        CollectParticle(
+          position: Vector2(
+            size.x * 0.25 +
+                random.nextDouble() * size.x * 0.5,
+            size.y * 0.18 +
+                random.nextDouble() * size.y * 0.30,
+          ),
+          color: color,
+        )..priority = 89,
+      );
     }
   }
 
@@ -1177,6 +1381,12 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     _runAnimationTime = 0;
     _landingEffect = 0;
     _impactEffect = 0;
+    _eventParticleTimer = 0;
+    _triggeredEvents.clear();
+
+    atmosphereOverlay
+      ..color = Colors.transparent
+      ..opacity = 0;
 
     mascotte.scale = Vector2.all(1.0);
     mascotte.angle = 0;
