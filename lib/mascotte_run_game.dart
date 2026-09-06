@@ -615,6 +615,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   double _ballRainTimer = 0;
   double _twiixModeTimer = 0;
   double _twiixVisualTimer = 0;
+  double _twiixVisualDuration = 0;
   double _modeBonusDistance = 0;
 
   int _twiixEventCount = 0;
@@ -1038,6 +1039,22 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     if (_twiixVisualTimer > 0) {
       _twiixVisualTimer -= dt;
 
+      final elapsed =
+          _twiixVisualDuration - _twiixVisualTimer;
+
+      final enterProgress =
+          (elapsed / 0.55).clamp(0.0, 1.0).toDouble();
+
+      final exitProgress =
+          ((_twiixVisualTimer < 0.55)
+                  ? (1.0 - _twiixVisualTimer / 0.55)
+                  : 0.0)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      final smoothEnter =
+          1.0 - (1.0 - enterProgress) * (1.0 - enterProgress);
+
       final bounce =
           ((_runAnimationTime * 7).floor().isEven)
               ? 0.0
@@ -1045,26 +1062,46 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
       final baseY = size.y - groundHeight + bounce;
 
+      double slideOffset;
+
+      if (exitProgress > 0) {
+        slideOffset = exitProgress * 190;
+      } else {
+        slideOffset = (1.0 - smoothEnter) * 190;
+      }
+
+      final pop =
+          enterProgress < 1.0
+              ? 0.88 + 0.18 * smoothEnter
+              : 1.0;
+
       if (_visibleTwiixEvent == 1) {
         twiixGauche.position = Vector2(
-          size.x - 78,
+          size.x - 78 + slideOffset,
           baseY,
         );
+
+        twiixGauche.scale = Vector2.all(pop);
       } else if (_visibleTwiixEvent == 2) {
         twiixDroit.position = Vector2(
-          size.x - 78,
+          size.x - 78 + slideOffset,
           baseY,
         );
+
+        twiixDroit.scale = Vector2.all(pop);
       } else if (_visibleTwiixEvent == 3) {
         twiixGauche.position = Vector2(
-          size.x - 142,
+          size.x - 142 + slideOffset,
           baseY,
         );
 
         twiixDroit.position = Vector2(
-          size.x - 54,
+          size.x - 54 + slideOffset,
           baseY,
         );
+
+        twiixGauche.scale = Vector2.all(pop);
+        twiixDroit.scale = Vector2.all(pop);
       }
     } else if (_visibleTwiixEvent != 0) {
       _hideTwiix();
@@ -1108,6 +1145,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   void _activateTwiixGauche() {
     _visibleTwiixEvent = 1;
     _twiixVisualTimer = 3.2;
+    _twiixVisualDuration = 3.2;
     _zinBoostTimer = 6.0;
 
     _showTwiixBanner(
@@ -1124,6 +1162,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   void _activateTwiixDroit() {
     _visibleTwiixEvent = 2;
     _twiixVisualTimer = 3.2;
+    _twiixVisualDuration = 3.2;
     _ballRainTimer = 8.0;
 
     _showTwiixBanner(
@@ -1142,6 +1181,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   void _activateModeTwiix() {
     _visibleTwiixEvent = 3;
     _twiixVisualTimer = 4.0;
+    _twiixVisualDuration = 4.0;
     _twiixModeTimer = 10.0;
 
     if (_zinBoostTimer < 7.0) {
@@ -1160,7 +1200,20 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     _spawnTwiixParticles(
       const Color(0xFFFFD700),
-      count: 28,
+      count: 36,
+    );
+
+    atmosphereOverlay
+      ..color = const Color(0xFFFFD54F)
+      ..opacity = 0.20;
+
+    Future<void>.delayed(
+      const Duration(milliseconds: 220),
+      () {
+        if (!gameOver) {
+          atmosphereOverlay.opacity = 0.08;
+        }
+      },
     );
 
     _respawnBall();
@@ -1171,6 +1224,9 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     twiixGauche.position.x = -500;
     twiixDroit.position.x = -500;
+
+    twiixGauche.scale = Vector2.all(1.0);
+    twiixDroit.scale = Vector2.all(1.0);
   }
 
   void _showTwiixBanner(
@@ -1764,6 +1820,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     _ballRainTimer = 0;
     _twiixModeTimer = 0;
     _twiixVisualTimer = 0;
+    _twiixVisualDuration = 0;
 
     _twiixEventCount = 0;
     _visibleTwiixEvent = 0;
