@@ -98,16 +98,38 @@ class RoadTripBackdrop extends PositionComponent {
   }
 
   void _fitBackground(Vector2 targetSize) {
-    final fittedHeight = targetSize.y;
-    final fittedWidth = fittedHeight * _sceneRatio;
+    double fittedHeight;
+    double fittedWidth;
+    double fittedY;
+
+    if (_scene == 'grenoble') {
+      // Grenoble conserve son cadrage actuel.
+      fittedHeight = targetSize.y;
+      fittedWidth = fittedHeight * _sceneRatio;
+      fittedY = 0;
+    } else {
+      // Marseille et Paris sont des panoramas 2048x384.
+      // On les adapte à la largeur plutôt qu'à la hauteur
+      // pour éviter un énorme zoom sur téléphone.
+      fittedWidth = targetSize.x * 1.45;
+      fittedHeight = fittedWidth / _sceneRatio;
+
+      // Le panorama reste placé juste au-dessus du sol.
+      fittedY =
+          targetSize.y - MascotteRunGame.groundHeight - fittedHeight;
+
+      if (fittedY < 0) {
+        fittedY = 0;
+      }
+    }
 
     background1
       ..size = Vector2(fittedWidth, fittedHeight)
-      ..position = Vector2(0, 0);
+      ..position = Vector2(0, fittedY);
 
     background2
       ..size = Vector2(fittedWidth, fittedHeight)
-      ..position = Vector2(fittedWidth, 0);
+      ..position = Vector2(fittedWidth, fittedY);
   }
 
   @override
