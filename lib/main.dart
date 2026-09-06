@@ -4500,15 +4500,62 @@ class MascotteRunBadgesPage extends StatefulWidget {
       _MascotteRunBadgesPageState();
 }
 
-class _MascotteRunBadgesPageState extends State<MascotteRunBadgesPage> {
+class _MascotteRunBadgesPageState
+    extends State<MascotteRunBadgesPage> {
   int _bestDistance = 0;
 
-  static const List<(int, String, IconData)> _badges = [
-    (500, 'Premiers pas', Icons.pets_rounded),
-    (1000, 'Zin Runner', Icons.directions_run_rounded),
-    (2000, 'Chihuahua', Icons.bolt_rounded),
-    (3500, 'Maître Chien', Icons.military_tech_rounded),
-    (5000, 'King Gnomi', Icons.emoji_events_rounded),
+  static const List<Map<String, dynamic>> _distanceBadges = [
+    {
+      'target': 500,
+      'title': 'Premiers Pas',
+      'asset':
+          'assets/images/badges/mascotte_run/premiers_pas_500.png',
+    },
+    {
+      'target': 1000,
+      'title': 'Zin Runner',
+      'asset':
+          'assets/images/badges/mascotte_run/zin_runner_1000.png',
+    },
+    {
+      'target': 2000,
+      'title': 'Chihuahua',
+      'asset':
+          'assets/images/badges/mascotte_run/chihuahua_2000.png',
+    },
+    {
+      'target': 3500,
+      'title': 'Maître Chien',
+      'asset':
+          'assets/images/badges/mascotte_run/maitre_chien_3500.png',
+    },
+    {
+      'target': 5000,
+      'title': 'King Gnomi',
+      'asset':
+          'assets/images/badges/mascotte_run/king_gnomi_5000.png',
+    },
+  ];
+
+  static const List<Map<String, dynamic>> _legendaryBadges = [
+    {
+      'title': 'Queen Wendy',
+      'subtitle': 'Badge légendaire',
+      'asset':
+          'assets/images/badges/mascotte_run/queen_wendy.png',
+    },
+    {
+      'title': 'Swan La Fusée',
+      'subtitle': 'Badge légendaire',
+      'asset':
+          'assets/images/badges/mascotte_run/swan_la_fusee.png',
+    },
+    {
+      'title': 'Dean Le Sage',
+      'subtitle': 'Badge légendaire',
+      'asset':
+          'assets/images/badges/mascotte_run/dean_le_sage.png',
+    },
   ];
 
   @override
@@ -4519,7 +4566,9 @@ class _MascotteRunBadgesPageState extends State<MascotteRunBadgesPage> {
 
   Future<void> _loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
-    final best = prefs.getInt('mascotte_run_best_distance') ?? 0;
+
+    final best =
+        prefs.getInt('mascotte_run_best_distance') ?? 0;
 
     if (!mounted) return;
 
@@ -4528,138 +4577,533 @@ class _MascotteRunBadgesPageState extends State<MascotteRunBadgesPage> {
     });
   }
 
+  void _openBadge({
+    required String asset,
+    required String title,
+    required bool unlocked,
+    String? subtitle,
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            title: Text(title),
+            backgroundColor: Colors.black,
+          ),
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    InteractiveViewer(
+                      minScale: 0.8,
+                      maxScale: 4,
+                      child: ClipRRect(
+                        borderRadius:
+                            BorderRadius.circular(24),
+                        child: ColorFiltered(
+                          colorFilter: unlocked
+                              ? const ColorFilter.mode(
+                                  Colors.transparent,
+                                  BlendMode.dst,
+                                )
+                              : const ColorFilter.mode(
+                                  Color(0xFF555555),
+                                  BlendMode.saturation,
+                                ),
+                          child: Image.asset(
+                            asset,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (!unlocked)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(
+                            alpha: 0.72,
+                          ),
+                          borderRadius:
+                              BorderRadius.circular(22),
+                          border: Border.all(
+                            color: Colors.white24,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.lock_rounded,
+                              color: Colors.white,
+                              size: 42,
+                            ),
+                            if (subtitle != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                subtitle,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontWeight:
+                                      FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final unlockedCount = _distanceBadges
+        .where(
+          (badge) =>
+              _bestDistance >= badge['target'] as int,
+        )
+        .length;
+
     return Scaffold(
       backgroundColor: const Color(0xFF09090D),
       appBar: AppBar(
-        title: const Text('Badges de Gnomi'),
+        title: const Text('Badges Mascotte Run'),
         backgroundColor: Colors.black,
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding:
+              const EdgeInsets.fromLTRB(16, 16, 16, 30),
           children: [
-            Text(
-              'RECORD  $_bestDistance m',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: pink,
-                fontSize: 22,
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFF15151B),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: pink.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.workspace_premium_rounded,
+                    color: pink,
+                    size: 34,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'RECORD  $_bestDistance m',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '$unlockedCount / 5 badges de distance débloqués',
+                    style: const TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'BADGES DE DISTANCE',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
             const Text(
-              'Cours toujours plus loin avec Gnomi pour débloquer les cinq rangs.',
-              textAlign: TextAlign.center,
+              'Cours toujours plus loin pour compléter la collection.',
               style: TextStyle(
-                color: Colors.white60,
+                color: Colors.white54,
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 20),
-            for (final badge in _badges)
-              _buildBadge(
-                badge.$1,
-                badge.$2,
-                badge.$3,
+            const SizedBox(height: 14),
+            for (final badge in _distanceBadges)
+              _buildDistanceBadge(badge),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'BADGES LÉGENDAIRES',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: pink.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'ULTRA RARES',
+                    style: TextStyle(
+                      color: pink,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            const Text(
+              'Wendy, Swan et Dean possèdent leurs propres récompenses légendaires.',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 13,
               ),
+            ),
+            const SizedBox(height: 14),
+            for (final badge in _legendaryBadges)
+              _buildLegendaryBadge(badge),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBadge(
-    int target,
-    String title,
-    IconData icon,
+  Widget _buildDistanceBadge(
+    Map<String, dynamic> badge,
   ) {
-    final unlocked = _bestDistance >= target;
-    final progress =
-        (_bestDistance / target).clamp(0.0, 1.0).toDouble();
+    final target = badge['target'] as int;
+    final title = badge['title'] as String;
+    final asset = badge['asset'] as String;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: unlocked
-            ? const Color(0xFF1B1319)
-            : const Color(0xFF121217),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: unlocked ? pink : Colors.white12,
-          width: unlocked ? 2 : 1,
-        ),
+    final unlocked = _bestDistance >= target;
+
+    final progress =
+        (_bestDistance / target)
+            .clamp(0.0, 1.0)
+            .toDouble();
+
+    return GestureDetector(
+      onTap: () => _openBadge(
+        asset: asset,
+        title: title,
+        unlocked: unlocked,
+        subtitle: unlocked
+            ? 'Badge débloqué'
+            : 'Atteins $target m pour le débloquer',
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: unlocked
-                  ? pink.withValues(alpha: 0.16)
-                  : Colors.white10,
-            ),
-            child: Icon(
-              unlocked ? icon : Icons.lock_rounded,
-              color: unlocked ? pink : Colors.white38,
-              size: 30,
-            ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF121218),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: unlocked
+                ? pink.withValues(alpha: 0.55)
+                : Colors.white12,
+            width: unlocked ? 2 : 1,
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          boxShadow: unlocked
+              ? [
+                  BoxShadow(
+                    color: pink.withValues(alpha: 0.10),
+                    blurRadius: 18,
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.stretch,
+          children: [
+            Stack(
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color:
-                        unlocked ? Colors.white : Colors.white60,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(
+                      top: Radius.circular(21),
+                    ),
+                    child: ColorFiltered(
+                      colorFilter: unlocked
+                          ? const ColorFilter.mode(
+                              Colors.transparent,
+                              BlendMode.dst,
+                            )
+                          : const ColorFilter.mode(
+                              Color(0xFF555555),
+                              BlendMode.saturation,
+                            ),
+                      child: Opacity(
+                        opacity: unlocked ? 1 : 0.38,
+                        child: Image.asset(
+                          asset,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  '$target m',
-                  style: TextStyle(
-                    color: unlocked ? pink : Colors.white38,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
+                if (!unlocked)
+                  const Positioned.fill(
+                    child: Center(
+                      child: CircleAvatar(
+                        radius: 31,
+                        backgroundColor:
+                            Color(0xCC09090D),
+                        child: Icon(
+                          Icons.lock_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 9),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 7,
-                    backgroundColor: Colors.white10,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  unlocked
-                      ? 'DÉBLOQUÉ'
-                      : '$_bestDistance / $target m',
-                  style: TextStyle(
-                    color: unlocked
-                        ? Colors.white70
-                        : Colors.white38,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: unlocked
+                          ? pink
+                          : const Color(0xCC09090D),
+                      borderRadius:
+                          BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      unlocked
+                          ? 'DÉBLOQUÉ'
+                          : '$target m',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: unlocked
+                          ? Colors.white
+                          : Colors.white60,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius:
+                        BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 7,
+                      backgroundColor: Colors.white10,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    unlocked
+                        ? '$target m atteints'
+                        : '$_bestDistance / $target m',
+                    style: TextStyle(
+                      color: unlocked
+                          ? pink
+                          : Colors.white38,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegendaryBadge(
+    Map<String, dynamic> badge,
+  ) {
+    final title = badge['title'] as String;
+    final asset = badge['asset'] as String;
+    final subtitle = badge['subtitle'] as String;
+
+    const unlocked = false;
+
+    return GestureDetector(
+      onTap: () => _openBadge(
+        asset: asset,
+        title: title,
+        unlocked: unlocked,
+        subtitle:
+            'Condition de déblocage légendaire à découvrir',
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF121218),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: Colors.white12,
           ),
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.stretch,
+          children: [
+            Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(
+                      top: Radius.circular(21),
+                    ),
+                    child: ColorFiltered(
+                      colorFilter:
+                          const ColorFilter.mode(
+                        Color(0xFF555555),
+                        BlendMode.saturation,
+                      ),
+                      child: Opacity(
+                        opacity: 0.42,
+                        child: Image.asset(
+                          asset,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const Positioned.fill(
+                  child: Center(
+                    child: CircleAvatar(
+                      radius: 34,
+                      backgroundColor:
+                          Color(0xCC09090D),
+                      child: Icon(
+                        Icons.lock_rounded,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xCC09090D),
+                      borderRadius:
+                          BorderRadius.circular(18),
+                    ),
+                    child: const Text(
+                      'LÉGENDAIRE',
+                      style: TextStyle(
+                        color: Color(0xFFFFD54F),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Color(0xFFFFD54F),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 18,
+                            fontWeight:
+                                FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 12,
+                            fontWeight:
+                                FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.lock_rounded,
+                    color: Colors.white38,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
