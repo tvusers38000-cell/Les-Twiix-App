@@ -622,6 +622,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   int _extraBallScore = 0;
   int _visibleTwiixEvent = 0;
 
+  bool _modeTwiixTriggered = false;
+
   late final SpriteComponent twiixGauche;
   late final SpriteComponent twiixDroit;
 
@@ -1179,6 +1181,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   }
 
   void _activateModeTwiix() {
+    _modeTwiixTriggered = true;
+
     _visibleTwiixEvent = 3;
     _twiixVisualTimer = 4.0;
     _twiixVisualDuration = 4.0;
@@ -1700,8 +1704,18 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
       await _saveBestDistance();
 
-      final awardedPoints =
+      final runRewardPoints =
           await _claimMascotteRunRewards(currentDistance);
+
+      final challengePoints =
+          await _claimMascotteRunChallenges(
+        currentDistance: currentDistance,
+        currentBalls: currentBalls,
+        modeTwiixTriggered: _modeTwiixTriggered,
+      );
+
+      final awardedPoints =
+          runRewardPoints + challengePoints;
 
       // Le joueur a peut-être déjà relancé une partie pendant
       // les opérations asynchrones.
@@ -1734,6 +1748,163 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
       finalScoreText?.text =
           'SCORE  $currentScore';
+    }
+  }
+
+  Future<int> _claimMascotteRunChallenges({
+    required int currentDistance,
+    required int currentBalls,
+    required bool modeTwiixTriggered,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null || user.isAnonymous) {
+      return 0;
+    }
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final userRef =
+          firestore.collection('users').doc(user.uid);
+
+      return await firestore.runTransaction<int>(
+        (transaction) async {
+          final userSnapshot =
+              await transaction.get(userRef);
+
+          if (!userSnapshot.exists) {
+            return 0;
+          }
+
+          final userData = userSnapshot.data();
+
+          final playedSkins = <String>{};
+
+          final skinsRaw =
+              userData?['mascotteRunSkinsPlayed'];
+
+          if (skinsRaw is List) {
+            for (final value in skinsRaw) {
+              if (value is String) {
+                playedSkins.add(value);
+              }
+            }
+          }
+
+          playedSkins.add(skinId);
+
+          final candidates = <String, Map<String, dynamic>>{};
+
+          if (currentDistance >= 1000) {
+            candidates['mascotte_run_1000'] = {
+              'type': 'mascotte_run_1000',
+              'points': 20,
+            };
+          }
+
+          if (currentBalls >= 15) {
+            candidates['mascotte_run_15_balls'] = {
+              'type': 'mascotte_run_15_balls',
+              'points': 25,
+            };
+          }
+
+          if (modeTwiixTriggered) {
+            candidates['mascotte_run_mode_twiix'] = {
+              'type': 'mascotte_run_mode_twiix',
+              'points': 30,
+            };
+          }
+
+          final hasPack =
+              playedSkins.contains('wendy') &&
+              playedSkins.contains('swan') &&
+              playedSkins.contains('dean');
+
+          if (hasPack) {
+            candidates['mascotte_run_pack'] = {
+              'type': 'mascotte_run_pack',
+              'points': 40,
+            };
+          }
+
+          if (currentDistance >= 5000) {
+            candidates['mascotte_run_5000'] = {
+              'type': 'mascotte_run_5000',
+              'points': 100,
+            };
+          }
+
+          final rewardSnapshots =
+              <String, DocumentSnapshot<Map<String, dynamic>>>{};
+
+          for (final entry in candidates.entries) {
+            final rewardRef = userRef
+                .collection('challengeRewards')
+                .doc(entry.key);
+
+            rewardSnapshots[entry.key] =
+                await transaction.get(rewardRef);
+          }
+
+          var totalAwarded = 0;
+          final currentPoints =
+              (userData?['twiixPoints'] as num?)
+                      ?.toInt() ??
+                  0;
+
+          for (final entry in candidates.entries) {
+            final existing =
+                rewardSnapshots[entry.key];
+
+            if (existing?.exists == true) {
+              continue;
+            }
+
+            final points =
+                (entry.value['points'] as num).toInt();
+
+            final rewardRef = userRef
+                .collection('challengeRewards')
+                .doc(entry.key);
+
+            transaction.set(
+              rewardRef,
+              {
+                'challengeId': entry.key,
+                'type': entry.value['type'],
+                'points': points,
+                'source': 'mascotte_run',
+                'awardedAt':
+                    FieldValue.serverTimestamp(),
+              },
+            );
+
+            totalAwarded += points;
+          }
+
+          transaction.update(
+            userRef,
+            {
+              'mascotteRunSkinsPlayed':
+                  playedSkins.toList(),
+              'lastMascotteRunChallengeAt':
+                  FieldValue.serverTimestamp(),
+              if (totalAwarded > 0)
+                'twiixPoints':
+                    currentPoints + totalAwarded,
+            },
+          );
+
+          return totalAwarded;
+        },
+      );
+    } catch (e) {
+      debugPrint(
+        'Mascotte Run: défis impossibles: $e',
+      );
+
+      return 0;
     }
   }
 
@@ -1976,6 +2147,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     _twiixEventCount = 0;
     _visibleTwiixEvent = 0;
+    _modeTwiixTriggered = false;
     _nextTwiixEventDistance = 650;
 
     _hideTwiix();

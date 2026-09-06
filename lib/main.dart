@@ -369,6 +369,49 @@ class TwiixState extends ChangeNotifier {
       });
     } catch (_) {}
 
+    final mascotteRunChallenges = <Challenge>[
+      Challenge(
+        'Premier Sprint',
+        'Atteins 1 000 m dans La Mascotte Run',
+        20,
+        id: 'mascotte_run_1000',
+        type: 'mascotte_run_1000',
+        active: true,
+      ),
+      Challenge(
+        'Chasseur de Ballons',
+        'Ramasse 15 ballons dans une seule partie',
+        25,
+        id: 'mascotte_run_15_balls',
+        type: 'mascotte_run_15_balls',
+        active: true,
+      ),
+      Challenge(
+        'Mode Zin',
+        'Déclenche le MODE TWIIX pendant une partie',
+        30,
+        id: 'mascotte_run_mode_twiix',
+        type: 'mascotte_run_mode_twiix',
+        active: true,
+      ),
+      Challenge(
+        'La Meute',
+        'Joue avec Wendy, Swan et Dean',
+        40,
+        id: 'mascotte_run_pack',
+        type: 'mascotte_run_pack',
+        active: true,
+      ),
+      Challenge(
+        'Marathon Gnomi',
+        'Atteins 5 000 m dans La Mascotte Run',
+        100,
+        id: 'mascotte_run_5000',
+        type: 'mascotte_run_5000',
+        active: true,
+      ),
+    ];
+
     bool? firestoreIsLive;
 
     try {
@@ -398,9 +441,38 @@ class TwiixState extends ChangeNotifier {
       donors: decodeList('donors', Donor.fromJson, [
         Donor('TwiixMaster', 3250), Donor('MaxTwiix', 2450), Donor('LaTeamTwiix', 2100), Donor('Fan2Twiix', 1870),
       ]),
-      challenges: firestoreChallenges ?? decodeList('challenges', Challenge.fromJson, [
-        Challenge('Défi de la semaine', 'Twiix Dance', 150), Challenge('Clip du mois', 'Envoie ton meilleur clip', 100), Challenge('Quiz Twiix', '10 questions sur les lives', 80),
-      ]),
+      challenges: [
+        ...(firestoreChallenges ??
+            decodeList(
+              'challenges',
+              Challenge.fromJson,
+              [
+                Challenge(
+                  'Défi de la semaine',
+                  'Twiix Dance',
+                  150,
+                ),
+                Challenge(
+                  'Clip du mois',
+                  'Envoie ton meilleur clip',
+                  100,
+                ),
+                Challenge(
+                  'Quiz Twiix',
+                  '10 questions sur les lives',
+                  80,
+                ),
+              ],
+            )),
+        ...mascotteRunChallenges.where(
+          (mascotteChallenge) =>
+              !(firestoreChallenges ?? const <Challenge>[])
+                  .any(
+            (existing) =>
+                existing.id == mascotteChallenge.id,
+          ),
+        ),
+      ],
       polls: firestorePolls,
     );
   }
