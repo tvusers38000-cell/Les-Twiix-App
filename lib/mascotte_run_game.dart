@@ -13,15 +13,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 class RoadTripBackdrop extends PositionComponent {
   late final SpriteComponent background1;
   late final SpriteComponent background2;
+  late final SpriteComponent transition1;
+  late final SpriteComponent transition2;
 
-  late final Sprite _marseilleSprite;
-  late final Sprite _grenobleSprite;
-  late final Sprite _parisSprite;
+  late final Map<String, Sprite> _sprites;
 
   final Images gameImages;
 
   double scrollSpeed = 0;
-  String _scene = 'marseille';
+
+  String _scene = 'marseille_vieux_port';
+  String? _transitionScene;
+
+  bool _transitioning = false;
+  double _transitionTimer = 0;
+
+  static const double _transitionDuration = 1.25;
+  static const double _sceneRatio = 1774 / 887;
 
   RoadTripBackdrop({
     required Vector2 gameSize,
@@ -36,103 +44,278 @@ class RoadTripBackdrop extends PositionComponent {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    _marseilleSprite = Sprite(
-      await gameImages.load('mascotte_run_marseille.png'),
-    );
+    _sprites = {
+      'marseille_vieux_port': Sprite(
+        await gameImages.load(
+          'mascotte_run_marseille_vieux_port.png',
+        ),
+      ),
+      'marseille_velodrome': Sprite(
+        await gameImages.load(
+          'mascotte_run_marseille_velodrome.png',
+        ),
+      ),
+      'marseille_calanques': Sprite(
+        await gameImages.load(
+          'mascotte_run_marseille_calanques.png',
+        ),
+      ),
+      'grenoble_bastille': Sprite(
+        await gameImages.load(
+          'mascotte_run_grenoble_bastille.png',
+        ),
+      ),
+      'grenoble_quais': Sprite(
+        await gameImages.load(
+          'mascotte_run_grenoble_quais.png',
+        ),
+      ),
+      'grenoble_bulles': Sprite(
+        await gameImages.load(
+          'mascotte_run_grenoble_bulles.png',
+        ),
+      ),
+      'paris_eiffel': Sprite(
+        await gameImages.load(
+          'mascotte_run_paris_eiffel.png',
+        ),
+      ),
+      'paris_notre_dame': Sprite(
+        await gameImages.load(
+          'mascotte_run_paris_notre_dame.png',
+        ),
+      ),
+      'paris_parc_des_princes': Sprite(
+        await gameImages.load(
+          'mascotte_run_paris_parc_des_princes.png',
+        ),
+      ),
+    };
 
-    _grenobleSprite = Sprite(
-      await gameImages.load('mascotte_run_grenoble.png'),
-    );
-
-    _parisSprite = Sprite(
-      await gameImages.load('mascotte_run_paris.png'),
-    );
+    final initialSprite = _sprites[_scene]!;
 
     background1 = SpriteComponent(
-      sprite: _marseilleSprite,
+      sprite: initialSprite,
       position: Vector2.zero(),
     );
 
     background2 = SpriteComponent(
-      sprite: _marseilleSprite,
+      sprite: initialSprite,
       position: Vector2.zero(),
     );
 
-    addAll([background1, background2]);
+    transition1 = SpriteComponent(
+      sprite: initialSprite,
+      position: Vector2.zero(),
+    );
+
+    transition2 = SpriteComponent(
+      sprite: initialSprite,
+      position: Vector2.zero(),
+    );
+
+    _setOpacity(transition1, 0);
+    _setOpacity(transition2, 0);
+
+    addAll([
+      background1,
+      background2,
+      transition1,
+      transition2,
+    ]);
 
     _fitBackground(size);
   }
 
-  double get _sceneRatio {
-    switch (_scene) {
-      case 'grenoble':
-        return 1774 / 887;
-      case 'paris':
-      case 'marseille':
-      default:
-        return 768 / 384;
-    }
-  }
+  void _setOpacity(
+    SpriteComponent component,
+    double opacity,
+  ) {
+    final alpha =
+        (opacity.clamp(0.0, 1.0) * 255).round();
 
-  Sprite get _sceneSprite {
-    switch (_scene) {
-      case 'grenoble':
-        return _grenobleSprite;
-      case 'paris':
-        return _parisSprite;
-      case 'marseille':
-      default:
-        return _marseilleSprite;
-    }
+    component.paint.color = Color.fromARGB(
+      alpha,
+      255,
+      255,
+      255,
+    );
   }
 
   void setScene(String scene) {
-    if (_scene == scene) return;
+    if (!_sprites.containsKey(scene)) return;
 
-    _scene = scene;
+    if (scene == _scene) return;
 
-    background1.sprite = _sceneSprite;
-    background2.sprite = _sceneSprite;
+    if (_transitioning &&
+        scene == _transitionScene) {
+      return;
+    }
 
-    _fitBackground(size);
+    final newSprite = _sprites[scene]!;
+
+    transition1
+      ..sprite = newSprite
+      ..position = background1.position.clone();
+
+    transition2
+      ..sprite = newSprite
+      ..position = background2.position.clone();
+
+    transition1.size = background1.size.clone();
+    transition2.size = background2.size.clone();
+
+    _setOpacity(transition1, 0);
+    _setOpacity(transition2, 0);
+
+    _transitionScene = scene;
+    _transitionTimer = 0;
+    _transitioning = true;
+  }
+
+  void _completeTransition() {
+    final nextScene = _transitionScene;
+
+    if (nextScene == null) return;
+
+    final sprite = _sprites[nextScene]!;
+
+    background1
+      ..sprite = sprite
+      ..position = transition1.position.clone()
+      ..size = transition1.size.clone();
+
+    background2
+      ..sprite = sprite
+      ..position = transition2.position.clone()
+      ..size = transition2.size.clone();
+
+    _setOpacity(background1, 1);
+    _setOpacity(background2, 1);
+
+    _setOpacity(transition1, 0);
+    _setOpacity(transition2, 0);
+
+    _scene = nextScene;
+    _transitionScene = null;
+    _transitioning = false;
+    _transitionTimer = 0;
   }
 
   void _fitBackground(Vector2 targetSize) {
-    // Tous les décors utilisent désormais un ratio proche de 2:1.
-    // On peut donc remplir toute la hauteur de jeu comme Grenoble.
     final fittedHeight = targetSize.y;
-    final fittedWidth = fittedHeight * _sceneRatio;
+    final fittedWidth =
+        fittedHeight * _sceneRatio;
 
     background1
-      ..size = Vector2(fittedWidth, fittedHeight)
+      ..size = Vector2(
+        fittedWidth,
+        fittedHeight,
+      )
       ..position = Vector2(0, 0);
 
     background2
-      ..size = Vector2(fittedWidth, fittedHeight)
-      ..position = Vector2(fittedWidth, 0);
+      ..size = Vector2(
+        fittedWidth,
+        fittedHeight,
+      )
+      ..position = Vector2(
+        fittedWidth,
+        0,
+      );
+
+    transition1
+      ..size = Vector2(
+        fittedWidth,
+        fittedHeight,
+      )
+      ..position =
+          background1.position.clone();
+
+    transition2
+      ..size = Vector2(
+        fittedWidth,
+        fittedHeight,
+      )
+      ..position =
+          background2.position.clone();
+  }
+
+  void _scrollPair(
+    SpriteComponent first,
+    SpriteComponent second,
+    double movement,
+  ) {
+    first.position.x -= movement;
+    second.position.x -= movement;
+
+    final width = first.size.x;
+
+    if (first.position.x + width <= 0) {
+      first.position.x =
+          second.position.x + width;
+    }
+
+    if (second.position.x + width <= 0) {
+      second.position.x =
+          first.position.x + width;
+    }
   }
 
   @override
   void update(double dt) {
     super.update(dt);
 
-    if (scrollSpeed <= 0) return;
+    if (scrollSpeed > 0) {
+      final movement = scrollSpeed * dt;
 
-    final movement = scrollSpeed * dt;
+      _scrollPair(
+        background1,
+        background2,
+        movement,
+      );
 
-    background1.position.x -= movement;
-    background2.position.x -= movement;
-
-    final width = background1.size.x;
-
-    if (background1.position.x + width <= 0) {
-      background1.position.x =
-          background2.position.x + width;
+      if (_transitioning) {
+        _scrollPair(
+          transition1,
+          transition2,
+          movement,
+        );
+      }
     }
 
-    if (background2.position.x + width <= 0) {
-      background2.position.x =
-          background1.position.x + width;
+    if (!_transitioning) return;
+
+    _transitionTimer += dt;
+
+    final progress =
+        (_transitionTimer / _transitionDuration)
+            .clamp(0.0, 1.0)
+            .toDouble();
+
+    // Fondu croisé :
+    // l'ancien panorama disparaît pendant
+    // que le nouveau apparaît.
+    _setOpacity(
+      background1,
+      1 - progress,
+    );
+    _setOpacity(
+      background2,
+      1 - progress,
+    );
+
+    _setOpacity(
+      transition1,
+      progress,
+    );
+    _setOpacity(
+      transition2,
+      progress,
+    );
+
+    if (progress >= 1) {
+      _completeTransition();
     }
   }
 
@@ -140,7 +323,10 @@ class RoadTripBackdrop extends PositionComponent {
   void onGameResize(Vector2 newSize) {
     super.onGameResize(newSize);
 
-    size = Vector2(newSize.x, newSize.y);
+    size = Vector2(
+      newSize.x,
+      newSize.y,
+    );
 
     if (isLoaded) {
       _fitBackground(newSize);
@@ -1636,12 +1822,59 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     // VILLES
     // --------------------------------------------------------
 
-    if (roadTripMeters < 1500) {
-      backdrop.setScene('marseille');
+    // 9 panoramas : trois par ville.
+    //
+    // MARSEILLE
+    // 0-500    Vieux-Port
+    // 500-1000 Vélodrome
+    // 1000-1500 Calanques
+    //
+    // GRENOBLE
+    // 1500-2167 Bastille
+    // 2167-2834 Quais
+    // 2834-3500 Bulles
+    //
+    // PARIS
+    // 3500-4000 Tour Eiffel
+    // 4000-4500 Notre-Dame
+    // 4500-5000 Parc des Princes
+
+    if (roadTripMeters < 500) {
+      backdrop.setScene(
+        'marseille_vieux_port',
+      );
+    } else if (roadTripMeters < 1000) {
+      backdrop.setScene(
+        'marseille_velodrome',
+      );
+    } else if (roadTripMeters < 1500) {
+      backdrop.setScene(
+        'marseille_calanques',
+      );
+    } else if (roadTripMeters < 2167) {
+      backdrop.setScene(
+        'grenoble_bastille',
+      );
+    } else if (roadTripMeters < 2834) {
+      backdrop.setScene(
+        'grenoble_quais',
+      );
     } else if (roadTripMeters < 3500) {
-      backdrop.setScene('grenoble');
+      backdrop.setScene(
+        'grenoble_bulles',
+      );
+    } else if (roadTripMeters < 4000) {
+      backdrop.setScene(
+        'paris_eiffel',
+      );
+    } else if (roadTripMeters < 4500) {
+      backdrop.setScene(
+        'paris_notre_dame',
+      );
     } else {
-      backdrop.setScene('paris');
+      backdrop.setScene(
+        'paris_parc_des_princes',
+      );
     }
 
     // --------------------------------------------------------

@@ -31,6 +31,15 @@ flutter:
     - assets/images/mascotte_run_grenoble.png
     - assets/images/mascotte_run_marseille.png
     - assets/images/mascotte_run_paris.png
+    - assets/images/mascotte_run_marseille_vieux_port.png
+    - assets/images/mascotte_run_marseille_velodrome.png
+    - assets/images/mascotte_run_marseille_calanques.png
+    - assets/images/mascotte_run_grenoble_bastille.png
+    - assets/images/mascotte_run_grenoble_quais.png
+    - assets/images/mascotte_run_grenoble_bulles.png
+    - assets/images/mascotte_run_paris_eiffel.png
+    - assets/images/mascotte_run_paris_notre_dame.png
+    - assets/images/mascotte_run_paris_parc_des_princes.png
     - assets/images/mascotte_run_wendy.png
     - assets/images/mascotte_run_swan.png
     - assets/images/mascotte_run_dean.png
