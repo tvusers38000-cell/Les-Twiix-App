@@ -4708,6 +4708,7 @@ class _MascotteRunPlayPageState
       _soundEnabled = soundEnabled;
       _game = MascotteRunGame(
         skinId: skinId,
+        soundEnabled: soundEnabled,
       );
     });
 
@@ -4753,6 +4754,21 @@ class _MascotteRunPlayPageState
       await _startMusic();
     } else {
       await _musicPlayer.stop();
+    }
+
+    if (mounted) {
+      final prefs = await SharedPreferences.getInstance();
+
+      final skinId =
+          prefs.getString('mascotte_run_equipped_skin')
+              ?? 'gnomi';
+
+      setState(() {
+        _game = MascotteRunGame(
+          skinId: skinId,
+          soundEnabled: newValue,
+        );
+      });
     }
   }
 

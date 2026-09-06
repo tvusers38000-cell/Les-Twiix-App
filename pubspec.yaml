@@ -35,3 +35,7 @@ flutter:
     - assets/images/planning_source.jpeg
     - assets/images/badges/
     - assets/audio/mascotte_run_music.ogg
+    - assets/audio/mascotte_jump.wav
+    - assets/audio/mascotte_ball.wav
+    - assets/audio/mascotte_collision.wav
+    - assets/audio/mascotte_record.wav

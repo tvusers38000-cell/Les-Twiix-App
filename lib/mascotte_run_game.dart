@@ -7,6 +7,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GrenobleBackdrop extends PositionComponent {
@@ -459,10 +460,28 @@ class CollectParticle extends CircleComponent {
 
 class MascotteRunGame extends FlameGame with TapCallbacks {
   final String skinId;
+  final bool soundEnabled;
 
   MascotteRunGame({
     this.skinId = 'gnomi',
+    this.soundEnabled = true,
   });
+
+  final AudioPlayer _sfxPlayer = AudioPlayer();
+
+  Future<void> _playSfx(String asset, {double volume = 0.7}) async {
+    if (!soundEnabled) return;
+
+    try {
+      await _sfxPlayer.stop();
+      await _sfxPlayer.setVolume(volume);
+      await _sfxPlayer.play(
+        AssetSource('audio/$asset'),
+      );
+    } catch (e) {
+      debugPrint('Mascotte Run SFX error: $e');
+    }
+  }
 
   String get _skinAssetName {
     switch (skinId) {
@@ -705,6 +724,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       ballsCollected++;
       ballText.text = '⚽  $ballsCollected';
 
+      _playSfx(
+        'mascotte_ball.wav',
+        volume: 0.55,
+      );
+
       _spawnBallParticles();
 
       ballActive = false;
@@ -814,6 +838,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     gameOver = true;
     verticalSpeed = 0;
 
+    _playSfx(
+      'mascotte_collision.wav',
+      volume: 0.65,
+    );
+
     _saveBestDistance();
 
     gameOverText = TextComponent(
@@ -916,6 +945,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       await prefs.setInt(
         bestDistanceKey,
         currentDistance,
+      );
+
+      await _playSfx(
+        'mascotte_record.wav',
+        volume: 0.75,
       );
 
       await _saveCommunityRecord(
@@ -1047,6 +1081,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     if (onGround) {
       verticalSpeed = jumpForce;
       onGround = false;
+
+      _playSfx(
+        'mascotte_jump.wav',
+        volume: 0.45,
+      );
     }
 
     super.onTapDown(event);
