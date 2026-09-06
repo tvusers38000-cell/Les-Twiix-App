@@ -111,10 +111,14 @@ class RoadTripBackdrop extends PositionComponent {
       // Marseille et Paris sont des panoramas 2048x384.
       // On les adapte à la largeur plutôt qu'à la hauteur
       // pour éviter un énorme zoom sur téléphone.
-      fittedWidth = targetSize.x * 1.45;
-      fittedHeight = fittedWidth / _sceneRatio;
+      // Marseille et Paris gardent leur ratio panoramique,
+      // mais occupent environ 42 % de la hauteur de jeu.
+      // Cela conserve les monuments lisibles sans revenir
+      // au zoom géant du cadrage initial.
+      fittedHeight = targetSize.y * 0.42;
+      fittedWidth = fittedHeight * _sceneRatio;
 
-      // Le panorama reste placé juste au-dessus du sol.
+      // Le bas du panorama rejoint le niveau du sol.
       fittedY =
           targetSize.y - MascotteRunGame.groundHeight - fittedHeight;
 
