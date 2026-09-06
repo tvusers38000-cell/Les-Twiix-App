@@ -622,6 +622,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   int _extraBallScore = 0;
   int _visibleTwiixEvent = 0;
 
+  bool _startIntroActive = false;
+  double _startIntroTimer = 0;
+  TextComponent? _startIntroText;
+
+
   bool _modeTwiixTriggered = false;
 
   late final SpriteComponent twiixGauche;
@@ -795,6 +800,222 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     ]);
 
     _createGroundMarks();
+    _startRunIntro();
+  }
+
+  void _startRunIntro() {
+    _startIntroText?.removeFromParent();
+
+    _startIntroActive = true;
+    _startIntroTimer = 0;
+
+    backdrop.scrollSpeed = 0;
+
+    final twiixY = size.y - groundHeight + 4;
+
+    twiixGauche
+      ..position = Vector2(-90, twiixY)
+      ..scale = Vector2.all(1.0);
+
+    twiixDroit
+      ..position = Vector2(size.x + 90, twiixY)
+      ..scale = Vector2.all(1.0);
+
+    atmosphereOverlay
+      ..color = Colors.transparent
+      ..opacity = 0;
+
+    _startIntroText = TextComponent(
+      text: '3',
+      position: Vector2(size.x / 2, size.y * 0.24),
+      anchor: Anchor.center,
+      priority: 150,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 64,
+          fontWeight: FontWeight.w900,
+          shadows: [
+            Shadow(
+              color: Color(0xFFFF4081),
+              blurRadius: 18,
+            ),
+            Shadow(
+              color: Colors.black,
+              blurRadius: 8,
+              offset: Offset(2, 3),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    add(_startIntroText!);
+  }
+
+  void _updateStartIntro(double dt) {
+    _startIntroTimer += dt;
+
+    // Le décor reste totalement figé pendant le compte à rebours.
+    backdrop.scrollSpeed = 0;
+
+    final twiixY = size.y - groundHeight + 4;
+
+    // --------------------------------------------------------
+    // 3 : Twiix Gauche entre
+    // 0.00 -> 0.75 s
+    // --------------------------------------------------------
+    if (_startIntroTimer < 0.75) {
+      _startIntroText?.text = '3';
+
+      final t =
+          (_startIntroTimer / 0.75).clamp(0.0, 1.0).toDouble();
+
+      twiixGauche.position = Vector2(
+        -90 + ((size.x * 0.32) + 90) * t,
+        twiixY,
+      );
+
+      twiixDroit.position = Vector2(
+        size.x + 90,
+        twiixY,
+      );
+
+      final pulse = 1.0 + (t < 0.5 ? t : 1.0 - t) * 0.35;
+      _startIntroText?.scale = Vector2.all(pulse);
+
+      return;
+    }
+
+    // --------------------------------------------------------
+    // 2 : Twiix Droit entre
+    // 0.75 -> 1.50 s
+    // --------------------------------------------------------
+    if (_startIntroTimer < 1.50) {
+      _startIntroText?.text = '2';
+
+      final t =
+          ((_startIntroTimer - 0.75) / 0.75)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      twiixGauche.position = Vector2(
+        size.x * 0.32,
+        twiixY,
+      );
+
+      twiixDroit.position = Vector2(
+        size.x + 90 -
+            ((size.x + 90) - (size.x * 0.68)) * t,
+        twiixY,
+      );
+
+      final pulse = 1.0 + (t < 0.5 ? t : 1.0 - t) * 0.35;
+      _startIntroText?.scale = Vector2.all(pulse);
+
+      return;
+    }
+
+    // --------------------------------------------------------
+    // ZIN ! : les deux Twiix se rejoignent
+    // 1.50 -> 2.45 s
+    // --------------------------------------------------------
+    if (_startIntroTimer < 2.45) {
+      _startIntroText?.text = 'ZIN !';
+
+      final t =
+          ((_startIntroTimer - 1.50) / 0.95)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      twiixGauche.position = Vector2(
+        (size.x * 0.32) +
+            ((size.x * 0.43) - (size.x * 0.32)) * t,
+        twiixY,
+      );
+
+      twiixDroit.position = Vector2(
+        (size.x * 0.68) -
+            ((size.x * 0.68) - (size.x * 0.57)) * t,
+        twiixY,
+      );
+
+      final characterScale =
+          1.0 + (t < 0.55 ? t : 1.0 - t) * 0.22;
+
+      twiixGauche.scale = Vector2.all(characterScale);
+      twiixDroit.scale = Vector2.all(characterScale);
+
+      final textPulse =
+          1.15 + (t < 0.5 ? t : 1.0 - t) * 0.65;
+
+      _startIntroText?.scale = Vector2.all(textPulse);
+
+      // Flash rose au moment où ils se rejoignent.
+      final flashStrength =
+          (1.0 - ((t - 0.55).abs() * 4.0))
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      atmosphereOverlay
+        ..color = const Color(0xFFFF4081)
+        ..opacity = 0.30 * flashStrength;
+
+      return;
+    }
+
+    // --------------------------------------------------------
+    // GO ! : les Twiix repartent
+    // 2.45 -> 3.10 s
+    // --------------------------------------------------------
+    if (_startIntroTimer < 3.10) {
+      _startIntroText?.text = 'GO !';
+
+      atmosphereOverlay
+        ..color = Colors.transparent
+        ..opacity = 0;
+
+      final t =
+          ((_startIntroTimer - 2.45) / 0.65)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      twiixGauche.position = Vector2(
+        (size.x * 0.43) +
+            (-110 - (size.x * 0.43)) * t,
+        twiixY,
+      );
+
+      twiixDroit.position = Vector2(
+        (size.x * 0.57) +
+            ((size.x + 110) - (size.x * 0.57)) * t,
+        twiixY,
+      );
+
+      twiixGauche.scale = Vector2.all(1.0);
+      twiixDroit.scale = Vector2.all(1.0);
+
+      _startIntroText?.scale = Vector2.all(1.15);
+
+      return;
+    }
+
+    // --------------------------------------------------------
+    // FIN : démarrage réel de la Run
+    // --------------------------------------------------------
+    _startIntroActive = false;
+    _startIntroTimer = 0;
+
+    _startIntroText?.removeFromParent();
+    _startIntroText = null;
+
+    atmosphereOverlay
+      ..color = Colors.transparent
+      ..opacity = 0;
+
+    _hideTwiix();
+
+    backdrop.scrollSpeed = 0;
   }
 
   void _createGroundMarks() {
@@ -820,6 +1041,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   @override
   void update(double dt) {
     super.update(dt);
+
+    if (_startIntroActive) {
+      _updateStartIntro(dt);
+      return;
+    }
 
     if (gameOver) {
       if (_impactEffect > 0) {
@@ -2237,12 +2463,19 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       size.x + 430,
       size.y - groundHeight - 95,
     );
+
+    _startRunIntro();
   }
 
   @override
   void onTapDown(TapDownEvent event) {
     if (gameOver) {
       _restartGame();
+      super.onTapDown(event);
+      return;
+    }
+
+    if (_startIntroActive) {
       super.onTapDown(event);
       return;
     }
