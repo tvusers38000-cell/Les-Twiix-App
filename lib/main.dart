@@ -3799,6 +3799,16 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
     );
   }
 
+
+  void _openTutorial(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MascotteRunTutorialPage(),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -3923,6 +3933,25 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
                       ),
                     ),
                     const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 36,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _openTutorial(context),
+                        icon: const Icon(
+                          Icons.sports_esports_rounded,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'COMMENT JOUER ?',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     const Text(
                       'Trois, deux, Zin !',
                       style: TextStyle(
@@ -3933,6 +3962,197 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class MascotteRunTutorialPage extends StatelessWidget {
+  const MascotteRunTutorialPage({super.key});
+
+  Widget _card({
+    required IconData icon,
+    required String title,
+    required String text,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: cardDecoration(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: pink.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: pink, size: 25),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090D),
+      appBar: AppBar(
+        title: const Text('Comment jouer ?'),
+        backgroundColor: Colors.black,
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+          children: [
+            const Icon(
+              Icons.sports_esports_rounded,
+              color: pink,
+              size: 48,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'LA MASCOTTE RUN',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 25,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 5),
+            const Text(
+              'Cours. Esquive. Collectionne. Bats ton record.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white60,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            _card(
+              icon: Icons.flag_rounded,
+              title: 'BUT DU JEU',
+              text:
+                  'Cours le plus loin possible, évite les obstacles '
+                  'et essaie de battre ton record.',
+            ),
+            _card(
+              icon: Icons.touch_app_rounded,
+              title: 'COMMENT JOUER',
+              text:
+                  'Tape sur l’écran pour sauter. '
+                  'Le jeu accélère progressivement.',
+            ),
+            _card(
+              icon: Icons.sports_soccer_rounded,
+              title: 'BALLONS',
+              text:
+                  'Récupère les ballons pour augmenter ton score.',
+            ),
+            _card(
+              icon: Icons.flash_on_rounded,
+              title: 'TWIIX GAUCHE — BOOST ZIN',
+              text:
+                  'Tu accélères et deviens temporairement invincible.',
+            ),
+            _card(
+              icon: Icons.sports_soccer_rounded,
+              title: 'TWIIX DROIT — PLUIE DE BALLONS',
+              text:
+                  'Les ballons deviennent beaucoup plus nombreux.',
+            ),
+            _card(
+              icon: Icons.auto_awesome_rounded,
+              title: 'MODE TWIIX ×2',
+              text:
+                  'Quand les deux Twiix apparaissent ensemble : '
+                  '3, 2, ZIN ! Boost, invincibilité, pluie de ballons '
+                  'et score ×2.',
+            ),
+            _card(
+              icon: Icons.emoji_events_rounded,
+              title: 'RECORDS & BADGES',
+              text:
+                  'Plus tu vas loin, plus tu débloques de badges '
+                  'et améliores ton record.',
+            ),
+            _card(
+              icon: Icons.checkroom_rounded,
+              title: 'VESTIAIRE',
+              text:
+                  'Débloque Wendy, Swan et Dean et découvre '
+                  'leurs badges légendaires.',
+            ),
+            _card(
+              icon: Icons.stars_rounded,
+              title: 'TWIIX POINTS & DÉFIS',
+              text:
+                  'Tes performances peuvent compléter des défis '
+                  'et rapporter des Twiix Points.',
+            ),
+
+            const SizedBox(height: 8),
+
+            SizedBox(
+              height: 54,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.check_circle_rounded),
+                label: const Text(
+                  'J’AI COMPRIS — GO !',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            const Text(
+              'Trois, deux, Zin !',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white60,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
