@@ -1593,7 +1593,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       volume: 0.65,
     );
 
-    _saveBestDistance();
+    _finalizeRunSummary();
 
     gameOverText = TextComponent(
       text: 'GAME OVER',
@@ -1617,14 +1617,15 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     );
 
     finalStatsText = TextComponent(
-      text: '${distance.floor()} m  •  $ballsCollected ballon(s)',
+      text:
+          '${distance.floor()} m  •  $ballsCollected ballon(s)  •  calcul du record...',
       position: Vector2(size.x / 2, size.y * 0.40),
       anchor: Anchor.center,
       priority: 100,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 19,
+          fontSize: 16,
           fontWeight: FontWeight.w700,
           shadows: [
             Shadow(
@@ -1682,6 +1683,157 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       finalScoreText!,
       restartText!,
     ]);
+  }
+
+  Future<void> _finalizeRunSummary() async {
+    final currentDistance = distance.floor();
+    final currentScore = score;
+    final currentBalls = ballsCollected;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final previousBest = prefs.getInt(bestDistanceKey) ?? 0;
+
+      final isNewRecord = currentDistance > previousBest;
+      final bestDistance =
+          isNewRecord ? currentDistance : previousBest;
+
+      await _saveBestDistance();
+
+      final awardedPoints =
+          await _claimMascotteRunRewards(currentDistance);
+
+      // Le joueur a peut-être déjà relancé une partie pendant
+      // les opérations asynchrones.
+      if (!gameOver) return;
+
+      gameOverText?.text =
+          isNewRecord ? 'NOUVEAU RECORD !' : 'GAME OVER';
+
+      finalStatsText?.text =
+          '$currentDistance m  •  $currentBalls ballon(s)  •  RECORD $bestDistance m';
+
+      if (awardedPoints > 0) {
+        finalScoreText?.text =
+            'SCORE  $currentScore\n+$awardedPoints TWIIX POINTS';
+      } else {
+        finalScoreText?.text =
+            'SCORE  $currentScore';
+      }
+    } catch (e) {
+      debugPrint(
+        'Mascotte Run: finalisation de partie impossible: $e',
+      );
+
+      await _saveBestDistance();
+
+      if (!gameOver) return;
+
+      finalStatsText?.text =
+          '$currentDistance m  •  $currentBalls ballon(s)';
+
+      finalScoreText?.text =
+          'SCORE  $currentScore';
+    }
+  }
+
+  Future<int> _claimMascotteRunRewards(
+    int currentDistance,
+  ) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null || user.isAnonymous) {
+      return 0;
+    }
+
+    const rewards = <int, int>{
+      500: 5,
+      1000: 10,
+      2000: 20,
+      3500: 35,
+      5000: 50,
+    };
+
+    final eligibleMilestones = rewards.keys
+        .where((milestone) => currentDistance >= milestone)
+        .toList();
+
+    if (eligibleMilestones.isEmpty) {
+      return 0;
+    }
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final userRef =
+          firestore.collection('users').doc(user.uid);
+
+      return await firestore.runTransaction<int>(
+        (transaction) async {
+          final userSnapshot =
+              await transaction.get(userRef);
+
+          if (!userSnapshot.exists) {
+            return 0;
+          }
+
+          final data = userSnapshot.data();
+
+          final alreadyClaimed = <int>{};
+
+          final claimedRaw =
+              data?['mascotteRunRewardMilestones'];
+
+          if (claimedRaw is List) {
+            for (final value in claimedRaw) {
+              if (value is num) {
+                alreadyClaimed.add(value.toInt());
+              }
+            }
+          }
+
+          final newlyClaimed = eligibleMilestones
+              .where(
+                (milestone) =>
+                    !alreadyClaimed.contains(milestone),
+              )
+              .toList();
+
+          if (newlyClaimed.isEmpty) {
+            return 0;
+          }
+
+          var awardedPoints = 0;
+
+          for (final milestone in newlyClaimed) {
+            awardedPoints += rewards[milestone] ?? 0;
+          }
+
+          final currentPoints =
+              (data?['twiixPoints'] as num?)?.toInt() ??
+                  0;
+
+          transaction.update(
+            userRef,
+            {
+              'twiixPoints':
+                  currentPoints + awardedPoints,
+              'mascotteRunRewardMilestones':
+                  FieldValue.arrayUnion(newlyClaimed),
+              'lastMascotteRunRewardAt':
+                  FieldValue.serverTimestamp(),
+            },
+          );
+
+          return awardedPoints;
+        },
+      );
+    } catch (e) {
+      debugPrint(
+        'Mascotte Run: récompense Twiix Points impossible: $e',
+      );
+
+      return 0;
+    }
   }
 
   Future<void> _saveBestDistance() async {
