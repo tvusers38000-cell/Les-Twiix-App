@@ -458,6 +458,26 @@ class CollectParticle extends CircleComponent {
 }
 
 class MascotteRunGame extends FlameGame with TapCallbacks {
+  final String skinId;
+
+  MascotteRunGame({
+    this.skinId = 'gnomi',
+  });
+
+  String get _skinAssetName {
+    switch (skinId) {
+      case 'wendy':
+        return 'mascotte_run_wendy.png';
+      case 'swan':
+        return 'mascotte_run_swan.png';
+      case 'dean':
+        return 'mascotte_run_dean.png';
+      case 'gnomi':
+      default:
+        return 'mascotte_run_frame.png';
+    }
+  }
+
   static const double groundHeight = 90;
   static const double gravity = 1500;
   static const double jumpForce = -620;
@@ -522,7 +542,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     );
 
     mascotte = SpriteComponent(
-      sprite: await loadSprite('mascotte_run_frame.png'),
+      sprite: await loadSprite(_skinAssetName),
       position: Vector2(55, size.y - groundHeight - 75),
       size: Vector2(105, 75),
       priority: 20,

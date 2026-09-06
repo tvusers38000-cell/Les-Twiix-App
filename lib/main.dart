@@ -3718,6 +3718,14 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
     );
   }
 
+  void _openWardrobe(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MascotteRunWardrobePage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -3833,9 +3841,10 @@ class _MascotteRunPageState extends State<MascotteRunPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _MascotteMenuButton(
-                              icon: Icons.volume_up_rounded,
-                              label: 'SON',
-                            ),
+                                icon: Icons.checkroom_rounded,
+                                label: 'VESTIAIRE',
+                                onPressed: () => _openWardrobe(context),
+                              )
                           ),
                         ],
                       ),
@@ -3897,6 +3906,339 @@ class _MascotteMenuButton extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class MascotteRunWardrobePage extends StatefulWidget {
+  const MascotteRunWardrobePage({super.key});
+
+  @override
+  State<MascotteRunWardrobePage> createState() =>
+      _MascotteRunWardrobePageState();
+}
+
+class _MascotteRunWardrobePageState
+    extends State<MascotteRunWardrobePage> {
+  static const String _equippedSkinKey =
+      'mascotte_run_equipped_skin';
+
+  int _bestDistance = 0;
+  String _equippedSkin = 'gnomi';
+
+  static const List<Map<String, dynamic>> _skins = [
+    {
+      'id': 'gnomi',
+      'name': 'Gnomi',
+      'asset': 'assets/images/mascotte_run_frame.png',
+      'distance': 0,
+      'description': 'Le héros de toujours.',
+      'color': Color(0xFFFF2E93),
+    },
+    {
+      'id': 'wendy',
+      'name': 'Wendy',
+      'asset': 'assets/images/mascotte_run_wendy.png',
+      'distance': 500,
+      'description': 'Toujours pleine d’énergie.',
+      'color': Color(0xFFFF4DA6),
+    },
+    {
+      'id': 'swan',
+      'name': 'Swan',
+      'asset': 'assets/images/mascotte_run_swan.png',
+      'distance': 2000,
+      'description': 'Fidèle et courageux.',
+      'color': Color(0xFF2196F3),
+    },
+    {
+      'id': 'dean',
+      'name': 'Dean',
+      'asset': 'assets/images/mascotte_run_dean.png',
+      'distance': 3500,
+      'description': 'Une vraie boule d’énergie.',
+      'color': Color(0xFFFF4B3E),
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWardrobe();
+  }
+
+  Future<void> _loadWardrobe() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final best =
+        prefs.getInt('mascotte_run_best_distance') ?? 0;
+
+    final equipped =
+        prefs.getString(_equippedSkinKey) ?? 'gnomi';
+
+    if (!mounted) return;
+
+    setState(() {
+      _bestDistance = best;
+      _equippedSkin = equipped;
+    });
+  }
+
+  Future<void> _equipSkin(
+    String skinId,
+    int requiredDistance,
+  ) async {
+    if (_bestDistance < requiredDistance) {
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString(
+      _equippedSkinKey,
+      skinId,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _equippedSkin = skinId;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090D),
+      appBar: AppBar(
+        title: const Text('Vestiaire'),
+        backgroundColor: Colors.black,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                8,
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'VESTIAIRE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Choisis ton compagnon pour le run',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF15151B),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white12,
+                      ),
+                    ),
+                    child: Text(
+                      'RECORD  $_bestDistance m',
+                      style: const TextStyle(
+                        color: pink,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(
+                  12,
+                  8,
+                  12,
+                  20,
+                ),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.72,
+                ),
+                itemCount: _skins.length,
+                itemBuilder: (context, index) {
+                  final skin = _skins[index];
+
+                  final id = skin['id'] as String;
+                  final name = skin['name'] as String;
+                  final asset = skin['asset'] as String;
+                  final requiredDistance =
+                      skin['distance'] as int;
+                  final description =
+                      skin['description'] as String;
+                  final accent =
+                      skin['color'] as Color;
+
+                  final unlocked =
+                      _bestDistance >= requiredDistance;
+
+                  final equipped =
+                      _equippedSkin == id;
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF121217),
+                      borderRadius:
+                          BorderRadius.circular(18),
+                      border: Border.all(
+                        color: equipped
+                            ? accent
+                            : Colors.white12,
+                        width: equipped ? 2.5 : 1,
+                      ),
+                      boxShadow: equipped
+                          ? [
+                              BoxShadow(
+                                color: accent.withValues(
+                                  alpha: 0.22,
+                                ),
+                                blurRadius: 14,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Image.asset(
+                              asset,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            name.toUpperCase(),
+                            style: TextStyle(
+                              color: accent,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            description,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (!unlocked)
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.lock_rounded,
+                                  color: accent,
+                                  size: 15,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    '$requiredDistance m',
+                                    style: TextStyle(
+                                      color: accent,
+                                      fontSize: 12,
+                                      fontWeight:
+                                          FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            const SizedBox(height: 15),
+                          const SizedBox(height: 7),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 38,
+                            child: FilledButton(
+                              onPressed: unlocked
+                                  ? () => _equipSkin(
+                                        id,
+                                        requiredDistance,
+                                      )
+                                  : null,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: equipped
+                                    ? accent
+                                    : const Color(0xFF24242C),
+                                disabledBackgroundColor:
+                                    const Color(0xFF1A1A20),
+                              ),
+                              child: Text(
+                                equipped
+                                    ? 'ÉQUIPÉ'
+                                    : unlocked
+                                        ? 'ÉQUIPER'
+                                        : 'VERROUILLÉ',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight:
+                                      FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(
+                bottom: 12,
+              ),
+              child: Text(
+                'Plus qu’un jeu, une famille ♥',
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -4322,31 +4664,73 @@ class _MascotteRunBadgesPageState extends State<MascotteRunBadgesPage> {
   }
 }
 
-class MascotteRunPlayPage extends StatelessWidget {
+class MascotteRunPlayPage extends StatefulWidget {
   const MascotteRunPlayPage({super.key});
 
   @override
+  State<MascotteRunPlayPage> createState() =>
+      _MascotteRunPlayPageState();
+}
+
+class _MascotteRunPlayPageState
+    extends State<MascotteRunPlayPage> {
+  MascotteRunGame? _game;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEquippedSkin();
+  }
+
+  Future<void> _loadEquippedSkin() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final skinId =
+        prefs.getString('mascotte_run_equipped_skin')
+            ?? 'gnomi';
+
+    if (!mounted) return;
+
+    setState(() {
+      _game = MascotteRunGame(
+        skinId: skinId,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final game = _game;
+
     return Scaffold(
       backgroundColor: const Color(0xFF09090D),
       body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: GameWidget(
-                game: MascotteRunGame(),
+        child: game == null
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: pink,
+                ),
+              )
+            : Stack(
+                children: [
+                  Positioned.fill(
+                    child: GameWidget(
+                      game: game,
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: IconButton.filledTonal(
+                      onPressed: () =>
+                          Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.arrow_back_rounded,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            Positioned(
-              top: 10,
-              left: 10,
-              child: IconButton.filledTonal(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_rounded),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
