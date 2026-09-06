@@ -10,15 +10,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class GrenobleBackdrop extends PositionComponent {
+class RoadTripBackdrop extends PositionComponent {
   late final SpriteComponent background1;
   late final SpriteComponent background2;
+
+  late final Sprite _marseilleSprite;
+  late final Sprite _grenobleSprite;
+  late final Sprite _parisSprite;
 
   final Images gameImages;
 
   double scrollSpeed = 0;
+  String _scene = 'marseille';
 
-  GrenobleBackdrop({
+  RoadTripBackdrop({
     required Vector2 gameSize,
     required this.gameImages,
   }) : super(
@@ -31,33 +36,70 @@ class GrenobleBackdrop extends PositionComponent {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    final sprite = Sprite(
+    _marseilleSprite = Sprite(
+      await gameImages.load('mascotte_run_marseille.png'),
+    );
+
+    _grenobleSprite = Sprite(
       await gameImages.load('mascotte_run_grenoble.png'),
     );
 
+    _parisSprite = Sprite(
+      await gameImages.load('mascotte_run_paris.png'),
+    );
+
     background1 = SpriteComponent(
-      sprite: sprite,
+      sprite: _marseilleSprite,
       position: Vector2.zero(),
     );
 
     background2 = SpriteComponent(
-      sprite: sprite,
+      sprite: _marseilleSprite,
       position: Vector2.zero(),
     );
 
-    addAll([
-      background1,
-      background2,
-    ]);
+    addAll([background1, background2]);
+
+    _fitBackground(size);
+  }
+
+  double get _sceneRatio {
+    switch (_scene) {
+      case 'grenoble':
+        return 1774 / 887;
+      case 'paris':
+      case 'marseille':
+      default:
+        return 2048 / 384;
+    }
+  }
+
+  Sprite get _sceneSprite {
+    switch (_scene) {
+      case 'grenoble':
+        return _grenobleSprite;
+      case 'paris':
+        return _parisSprite;
+      case 'marseille':
+      default:
+        return _marseilleSprite;
+    }
+  }
+
+  void setScene(String scene) {
+    if (_scene == scene) return;
+
+    _scene = scene;
+
+    background1.sprite = _sceneSprite;
+    background2.sprite = _sceneSprite;
 
     _fitBackground(size);
   }
 
   void _fitBackground(Vector2 targetSize) {
-    const imageRatio = 1774 / 887;
-
     final fittedHeight = targetSize.y;
-    final fittedWidth = fittedHeight * imageRatio;
+    final fittedWidth = fittedHeight * _sceneRatio;
 
     background1
       ..size = Vector2(fittedWidth, fittedHeight)
@@ -82,11 +124,13 @@ class GrenobleBackdrop extends PositionComponent {
     final width = background1.size.x;
 
     if (background1.position.x + width <= 0) {
-      background1.position.x = background2.position.x + width;
+      background1.position.x =
+          background2.position.x + width;
     }
 
     if (background2.position.x + width <= 0) {
-      background2.position.x = background1.position.x + width;
+      background2.position.x =
+          background1.position.x + width;
     }
   }
 
@@ -458,6 +502,35 @@ class CollectParticle extends CircleComponent {
   }
 }
 
+class RunRainDrop extends RectangleComponent {
+  final double fallSpeed;
+
+  RunRainDrop({
+    required Vector2 position,
+    required this.fallSpeed,
+  }) : super(
+          position: position,
+          size: Vector2(2, 15),
+          priority: 45,
+          paint: Paint()
+            ..color = const Color(0xAABFE7FF),
+        ) {
+    angle = -0.20;
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    position.y += fallSpeed * dt;
+    position.x -= fallSpeed * 0.16 * dt;
+
+    if (position.y > 1200 || position.x < -40) {
+      removeFromParent();
+    }
+  }
+}
+
 class RunAtmosphereOverlay extends PositionComponent {
   double opacity = 0;
   Color color = Colors.transparent;
@@ -588,7 +661,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
   final Random random = Random();
 
-  late final GrenobleBackdrop backdrop;
+  late final RoadTripBackdrop backdrop;
   late final RectangleComponent ground;
   late final SpriteComponent mascotte;
   late final TextComponent distanceText;
@@ -607,6 +680,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   double _landingEffect = 0;
   double _impactEffect = 0;
   double _eventParticleTimer = 0;
+  double _rainParticleTimer = 0;
 
   final Set<int> _triggeredEvents = {};
 
@@ -669,7 +743,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    backdrop = GrenobleBackdrop(
+    backdrop = RoadTripBackdrop(
       gameSize: Vector2(size.x, size.y),
       gameImages: images,
     );
@@ -1553,6 +1627,25 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   void _updateRunEvents(double dt) {
     final meters = distance.floor();
 
+    // Voyage de 5000 m, puis la boucle recommence.
+    final roadTripMeters = meters % 5000;
+
+    // --------------------------------------------------------
+    // VILLES
+    // --------------------------------------------------------
+
+    if (roadTripMeters < 1500) {
+      backdrop.setScene('marseille');
+    } else if (roadTripMeters < 3500) {
+      backdrop.setScene('grenoble');
+    } else {
+      backdrop.setScene('paris');
+    }
+
+    // --------------------------------------------------------
+    // EVENEMENTS DE DISTANCE HISTORIQUES
+    // --------------------------------------------------------
+
     if (meters >= 500) {
       _triggerDistanceEvent(
         500,
@@ -1580,7 +1673,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     if (meters >= 3500) {
       _triggerDistanceEvent(
         3500,
-        'GRENOBLE BY NIGHT',
+        'PARIS BY NIGHT',
         const Color(0xFF90CAF9),
       );
     }
@@ -1593,29 +1686,86 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
       );
     }
 
-    if (meters < 1000) {
+    // --------------------------------------------------------
+    // JOUR / COUCHER DE SOLEIL / NUIT
+    // --------------------------------------------------------
+
+    if (roadTripMeters < 900) {
       atmosphereOverlay
         ..color = Colors.transparent
         ..opacity = 0;
-    } else if (meters < 3500) {
+    } else if (roadTripMeters < 1500) {
       final progress =
-          ((meters - 1000) / 2500)
+          ((roadTripMeters - 900) / 600)
               .clamp(0.0, 1.0)
               .toDouble();
 
       atmosphereOverlay
-        ..color = const Color(0xFFFF7A45)
-        ..opacity = 0.04 + progress * 0.06;
+        ..color = const Color(0xFFFF8A45)
+        ..opacity = 0.06 + progress * 0.10;
+    } else if (roadTripMeters < 2800) {
+      final progress =
+          ((roadTripMeters - 1500) / 1300)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      atmosphereOverlay
+        ..color = const Color(0xFF607D8B)
+        ..opacity = 0.04 + progress * 0.08;
+    } else if (roadTripMeters < 3500) {
+      final progress =
+          ((roadTripMeters - 2800) / 700)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      atmosphereOverlay
+        ..color = const Color(0xFF10254A)
+        ..opacity = 0.12 + progress * 0.12;
     } else {
       final progress =
-          ((meters - 3500) / 1500)
+          ((roadTripMeters - 3500) / 1500)
               .clamp(0.0, 1.0)
               .toDouble();
 
       atmosphereOverlay
         ..color = const Color(0xFF07132E)
-        ..opacity = 0.14 + progress * 0.10;
+        ..opacity = 0.16 + progress * 0.10;
     }
+
+    // --------------------------------------------------------
+    // VRAIE PLUIE A GRENOBLE
+    // --------------------------------------------------------
+
+    final raining =
+        roadTripMeters >= 2100 &&
+        roadTripMeters < 3000;
+
+    if (raining) {
+      _rainParticleTimer -= dt;
+
+      if (_rainParticleTimer <= 0) {
+        _rainParticleTimer = 0.045;
+
+        for (int i = 0; i < 3; i++) {
+          add(
+            RunRainDrop(
+              position: Vector2(
+                random.nextDouble() * (size.x + 80),
+                -30 - random.nextDouble() * 100,
+              ),
+              fallSpeed:
+                  430 + random.nextDouble() * 220,
+            ),
+          );
+        }
+      }
+    } else {
+      _rainParticleTimer = 0;
+    }
+
+    // --------------------------------------------------------
+    // PARTICULES TWIIX EXISTANTES
+    // --------------------------------------------------------
 
     if (meters >= 2000) {
       _eventParticleTimer -= dt;
