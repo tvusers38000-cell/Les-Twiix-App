@@ -473,6 +473,16 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     if (!soundEnabled) return;
 
     try {
+      await _sfxPlayer.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            contentType: AndroidContentType.sonification,
+            usageType: AndroidUsageType.game,
+            audioFocus: AndroidAudioFocus.none,
+          ),
+        ),
+      );
+
       await _sfxPlayer.stop();
       await _sfxPlayer.setVolume(volume);
       await _sfxPlayer.play(
