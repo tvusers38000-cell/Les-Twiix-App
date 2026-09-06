@@ -70,7 +70,7 @@ class RoadTripBackdrop extends PositionComponent {
       case 'paris':
       case 'marseille':
       default:
-        return 2048 / 384;
+        return 768 / 384;
     }
   }
 
@@ -98,42 +98,18 @@ class RoadTripBackdrop extends PositionComponent {
   }
 
   void _fitBackground(Vector2 targetSize) {
-    double fittedHeight;
-    double fittedWidth;
-    double fittedY;
-
-    if (_scene == 'grenoble') {
-      // Grenoble conserve son cadrage actuel.
-      fittedHeight = targetSize.y;
-      fittedWidth = fittedHeight * _sceneRatio;
-      fittedY = 0;
-    } else {
-      // Marseille et Paris sont des panoramas 2048x384.
-      // On les adapte à la largeur plutôt qu'à la hauteur
-      // pour éviter un énorme zoom sur téléphone.
-      // Marseille et Paris gardent leur ratio panoramique,
-      // mais occupent environ 42 % de la hauteur de jeu.
-      // Cela conserve les monuments lisibles sans revenir
-      // au zoom géant du cadrage initial.
-      fittedHeight = targetSize.y * 0.42;
-      fittedWidth = fittedHeight * _sceneRatio;
-
-      // Le bas du panorama rejoint le niveau du sol.
-      fittedY =
-          targetSize.y - MascotteRunGame.groundHeight - fittedHeight;
-
-      if (fittedY < 0) {
-        fittedY = 0;
-      }
-    }
+    // Tous les décors utilisent désormais un ratio proche de 2:1.
+    // On peut donc remplir toute la hauteur de jeu comme Grenoble.
+    final fittedHeight = targetSize.y;
+    final fittedWidth = fittedHeight * _sceneRatio;
 
     background1
       ..size = Vector2(fittedWidth, fittedHeight)
-      ..position = Vector2(0, fittedY);
+      ..position = Vector2(0, 0);
 
     background2
       ..size = Vector2(fittedWidth, fittedHeight)
-      ..position = Vector2(fittedWidth, fittedY);
+      ..position = Vector2(fittedWidth, 0);
   }
 
   @override
