@@ -871,6 +871,9 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   double _rainParticleTimer = 0;
 
   final Set<int> _triggeredEvents = {};
+  final Set<int> _triggeredRoadTripEvents = {};
+  int _roadTripLoop = -1;
+
 
   double _nextTwiixEventDistance = 650;
   double _zinBoostTimer = 0;
@@ -1818,6 +1821,11 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     // Voyage de 5000 m, puis la boucle recommence.
     final roadTripMeters = meters % 5000;
 
+  _updateRoadTripAnnouncements(
+    meters,
+    roadTripMeters,
+  );
+
     // --------------------------------------------------------
     // VILLES
     // --------------------------------------------------------
@@ -2033,6 +2041,172 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
           )..priority = 35,
         );
       }
+    }
+  }
+
+  void _updateRoadTripAnnouncements(
+    int meters,
+    int roadTripMeters,
+  ) {
+    final loop = meters ~/ 5000;
+
+    if (_roadTripLoop != loop) {
+      _roadTripLoop = loop;
+      _triggeredRoadTripEvents.clear();
+
+      if (loop > 0) {
+        _showRoadTripBanner(
+          'RETOUR VERS MARSEILLE',
+          const Color(0xFF42A5F5),
+          major: true,
+        );
+      }
+    }
+
+    void location(
+      int id,
+      int threshold,
+      String text,
+      Color color, {
+      bool major = false,
+    }) {
+      if (roadTripMeters < threshold) return;
+      if (_triggeredRoadTripEvents.contains(id)) return;
+
+      _triggeredRoadTripEvents.add(id);
+
+      _showRoadTripBanner(
+        text,
+        color,
+        major: major,
+      );
+    }
+
+    location(
+      0,
+      0,
+      'VIEUX-PORT',
+      const Color(0xFFFFD54F),
+    );
+
+    location(
+      1,
+      500,
+      'VÉLODROME',
+      const Color(0xFF42A5F5),
+    );
+
+    location(
+      2,
+      1000,
+      'CALANQUES',
+      const Color(0xFF80DEEA),
+    );
+
+    location(
+      3,
+      1500,
+      'DIRECTION GRENOBLE',
+      const Color(0xFFBFE7FF),
+      major: true,
+    );
+
+    location(
+      4,
+      2167,
+      'QUAIS DE L’ISÈRE',
+      const Color(0xFF90CAF9),
+    );
+
+    location(
+      5,
+      2834,
+      'LES BULLES',
+      const Color(0xFFE1F5FE),
+    );
+
+    location(
+      6,
+      3500,
+      'CAP SUR PARIS',
+      const Color(0xFFFFA65A),
+      major: true,
+    );
+
+    location(
+      7,
+      4000,
+      'NOTRE-DAME',
+      const Color(0xFFFFCC80),
+    );
+
+    location(
+      8,
+      4500,
+      'PARC DES PRINCES',
+      const Color(0xFF90CAF9),
+    );
+  }
+
+  void _showRoadTripBanner(
+    String text,
+    Color color, {
+    bool major = false,
+  }) {
+    final banner = TextComponent(
+      text: text,
+      position: Vector2(
+        size.x / 2,
+        major ? size.y * 0.30 : size.y * 0.27,
+      ),
+      anchor: Anchor.center,
+      priority: 88,
+      textRenderer: TextPaint(
+        style: TextStyle(
+          color: color,
+          fontSize: major ? 25 : 18,
+          fontWeight: FontWeight.w900,
+          letterSpacing: major ? 1.5 : 1.0,
+          shadows: const [
+            Shadow(
+              color: Colors.black,
+              blurRadius: 8,
+              offset: Offset(2, 3),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    banner.scale = Vector2.all(0.65);
+
+    add(banner);
+
+    Future<void>.delayed(
+      Duration(
+        milliseconds: major ? 2100 : 1500,
+      ),
+      () {
+        if (banner.isMounted) {
+          banner.removeFromParent();
+        }
+      },
+    );
+
+    final particleCount = major ? 18 : 6;
+
+    for (int i = 0; i < particleCount; i++) {
+      add(
+        CollectParticle(
+          position: Vector2(
+            size.x * 0.25 +
+                random.nextDouble() * size.x * 0.5,
+            size.y * 0.23 +
+                random.nextDouble() * size.y * 0.20,
+          ),
+          color: color,
+        )..priority = 87,
+      );
     }
   }
 
@@ -2814,6 +2988,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     _impactEffect = 0;
     _eventParticleTimer = 0;
     _triggeredEvents.clear();
+  _triggeredRoadTripEvents.clear();
+  _roadTripLoop = -1;
 
     atmosphereOverlay
       ..color = Colors.transparent
