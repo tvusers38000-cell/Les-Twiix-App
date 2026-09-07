@@ -890,6 +890,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   bool _startIntroActive = false;
   double _startIntroTimer = 0;
   TextComponent? _startIntroText;
+  bool _startIntroImpactTriggered = false;
 
 
   bool _modeTwiixTriggered = false;
@@ -1073,6 +1074,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     _startIntroActive = true;
     _startIntroTimer = 0;
+    _startIntroImpactTriggered = false;
 
     backdrop.scrollSpeed = 0;
 
@@ -1121,155 +1123,282 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   void _updateStartIntro(double dt) {
     _startIntroTimer += dt;
 
-    // Le décor reste totalement figé pendant le compte à rebours.
+    // Le monde reste figé pendant toute l'intro.
     backdrop.scrollSpeed = 0;
 
     final twiixY = size.y - groundHeight + 4;
 
+    // Easing avec léger dépassement pour donner davantage d'impact.
+    double easeOutBack(double t) {
+      const c1 = 1.70158;
+      const c3 = c1 + 1.0;
+      final x = t - 1.0;
+
+      return 1.0 +
+          c3 * x * x * x +
+          c1 * x * x;
+    }
+
     // --------------------------------------------------------
-    // 3 : Twiix Gauche entre
-    // 0.00 -> 0.75 s
+    // 3 : Twiix Gauche surgit de la gauche
     // --------------------------------------------------------
     if (_startIntroTimer < 0.75) {
       _startIntroText?.text = '3';
 
-      final t =
-          (_startIntroTimer / 0.75).clamp(0.0, 1.0).toDouble();
+      final raw =
+          (_startIntroTimer / 0.75)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      final t = easeOutBack(raw);
 
       twiixGauche.position = Vector2(
-        -90 + ((size.x * 0.32) + 90) * t,
-        twiixY,
+        -110 + ((size.x * 0.32) + 110) * t,
+        twiixY - sin(raw * pi) * 14,
       );
 
-      twiixDroit.position = Vector2(
-        size.x + 90,
-        twiixY,
-      );
+      twiixGauche
+        ..scale = Vector2.all(
+          0.82 + raw * 0.18,
+        )
+        ..angle = -0.10 * (1.0 - raw);
 
-      final pulse = 1.0 + (t < 0.5 ? t : 1.0 - t) * 0.35;
-      _startIntroText?.scale = Vector2.all(pulse);
+      twiixDroit
+        ..position = Vector2(size.x + 110, twiixY)
+        ..scale = Vector2.all(0.9)
+        ..angle = 0;
+
+      final pulse =
+          1.0 + sin(raw * pi) * 0.35;
+
+      _startIntroText?.scale =
+          Vector2.all(pulse);
 
       return;
     }
 
     // --------------------------------------------------------
-    // 2 : Twiix Droit entre
-    // 0.75 -> 1.50 s
+    // 2 : Twiix Droit surgit de la droite
     // --------------------------------------------------------
     if (_startIntroTimer < 1.50) {
       _startIntroText?.text = '2';
 
-      final t =
+      final raw =
           ((_startIntroTimer - 0.75) / 0.75)
               .clamp(0.0, 1.0)
               .toDouble();
 
-      twiixGauche.position = Vector2(
-        size.x * 0.32,
-        twiixY,
-      );
+      final t = easeOutBack(raw);
+
+      twiixGauche
+        ..position = Vector2(
+          size.x * 0.32,
+          twiixY,
+        )
+        ..scale = Vector2.all(1.0)
+        ..angle = 0;
 
       twiixDroit.position = Vector2(
-        size.x + 90 -
-            ((size.x + 90) - (size.x * 0.68)) * t,
-        twiixY,
+        size.x + 110 -
+            ((size.x + 110) -
+                    (size.x * 0.68)) *
+                t,
+        twiixY - sin(raw * pi) * 14,
       );
 
-      final pulse = 1.0 + (t < 0.5 ? t : 1.0 - t) * 0.35;
-      _startIntroText?.scale = Vector2.all(pulse);
+      twiixDroit
+        ..scale = Vector2.all(
+          0.82 + raw * 0.18,
+        )
+        ..angle = 0.10 * (1.0 - raw);
+
+      final pulse =
+          1.0 + sin(raw * pi) * 0.35;
+
+      _startIntroText?.scale =
+          Vector2.all(pulse);
 
       return;
     }
 
     // --------------------------------------------------------
-    // ZIN ! : les deux Twiix se rejoignent
-    // 1.50 -> 2.45 s
+    // ZIN ! : collision des deux Twiix
     // --------------------------------------------------------
     if (_startIntroTimer < 2.45) {
       _startIntroText?.text = 'ZIN !';
 
-      final t =
+      final raw =
           ((_startIntroTimer - 1.50) / 0.95)
               .clamp(0.0, 1.0)
               .toDouble();
 
+      final approach =
+          (raw / 0.55)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      final easedApproach =
+          easeOutBack(approach);
+
       twiixGauche.position = Vector2(
         (size.x * 0.32) +
-            ((size.x * 0.43) - (size.x * 0.32)) * t,
-        twiixY,
+            ((size.x * 0.43) -
+                    (size.x * 0.32)) *
+                easedApproach,
+        twiixY -
+            sin(approach * pi) * 8,
       );
 
       twiixDroit.position = Vector2(
         (size.x * 0.68) -
-            ((size.x * 0.68) - (size.x * 0.57)) * t,
-        twiixY,
+            ((size.x * 0.68) -
+                    (size.x * 0.57)) *
+                easedApproach,
+        twiixY -
+            sin(approach * pi) * 8,
       );
 
-      final characterScale =
-          1.0 + (t < 0.55 ? t : 1.0 - t) * 0.22;
+      // Impact unique au moment où ils se rejoignent.
+      if (raw >= 0.48 &&
+          !_startIntroImpactTriggered) {
+        _startIntroImpactTriggered = true;
 
-      twiixGauche.scale = Vector2.all(characterScale);
-      twiixDroit.scale = Vector2.all(characterScale);
+        for (int i = 0; i < 28; i++) {
+          final colors = [
+            const Color(0xFFFF4081),
+            const Color(0xFFFFD700),
+            const Color(0xFF42A5F5),
+            Colors.white,
+          ];
 
-      final textPulse =
-          1.15 + (t < 0.5 ? t : 1.0 - t) * 0.65;
+          add(
+            CollectParticle(
+              position: Vector2(
+                size.x * 0.35 +
+                    random.nextDouble() *
+                        size.x *
+                        0.30,
+                size.y * 0.28 +
+                    random.nextDouble() *
+                        size.y *
+                        0.35,
+              ),
+              color: colors[
+                  random.nextInt(colors.length)],
+            )..priority = 149,
+          );
+        }
+      }
 
-      _startIntroText?.scale = Vector2.all(textPulse);
-
-      // Flash rose au moment où ils se rejoignent.
-      final flashStrength =
-          (1.0 - ((t - 0.55).abs() * 4.0))
+      final impact =
+          (1.0 -
+                  ((raw - 0.50).abs() * 5.0))
               .clamp(0.0, 1.0)
               .toDouble();
 
-      atmosphereOverlay
-        ..color = const Color(0xFFFF4081)
-        ..opacity = 0.30 * flashStrength;
+      final characterScale =
+          1.0 + impact * 0.22;
+
+      // Petit shake visuel local au choc ZIN.
+      final zinShake =
+          sin(raw * pi * 18.0) * 4.0 * impact;
+
+      twiixGauche.position.x -= zinShake;
+      twiixDroit.position.x += zinShake;
+
+      twiixGauche
+        ..scale =
+            Vector2.all(characterScale)
+        ..angle = -impact * 0.035;
+
+      twiixDroit
+        ..scale =
+            Vector2.all(characterScale)
+        ..angle = impact * 0.035;
+
+      final textScale =
+          1.15 + impact * 0.85;
+
+      _startIntroText?.scale =
+          Vector2.all(textScale);
+
+      // Flash rose puis reflet doré.
+      if (raw < 0.58) {
+        atmosphereOverlay
+          ..color = const Color(0xFFFF4081)
+          ..opacity = 0.38 * impact;
+      } else {
+        final gold =
+            (1.0 -
+                    ((raw - 0.68).abs() * 4.5))
+                .clamp(0.0, 1.0)
+                .toDouble();
+
+        atmosphereOverlay
+          ..color = const Color(0xFFFFD700)
+          ..opacity = 0.18 * gold;
+      }
 
       return;
     }
 
     // --------------------------------------------------------
-    // GO ! : les Twiix repartent
-    // 2.45 -> 3.10 s
+    // GO ! : départ explosif
     // --------------------------------------------------------
     if (_startIntroTimer < 3.10) {
       _startIntroText?.text = 'GO !';
+
+      final raw =
+          ((_startIntroTimer - 2.45) / 0.65)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+      // Accélération de sortie.
+      final t = raw * raw;
 
       atmosphereOverlay
         ..color = Colors.transparent
         ..opacity = 0;
 
-      final t =
-          ((_startIntroTimer - 2.45) / 0.65)
-              .clamp(0.0, 1.0)
-              .toDouble();
+      twiixGauche
+        ..position = Vector2(
+          (size.x * 0.43) +
+              (-130 - (size.x * 0.43)) * t,
+          twiixY -
+              sin(raw * pi) * 10,
+        )
+        ..scale =
+            Vector2.all(1.0 - raw * 0.12)
+        ..angle = -raw * 0.08;
 
-      twiixGauche.position = Vector2(
-        (size.x * 0.43) +
-            (-110 - (size.x * 0.43)) * t,
-        twiixY,
-      );
+      twiixDroit
+        ..position = Vector2(
+          (size.x * 0.57) +
+              ((size.x + 130) -
+                      (size.x * 0.57)) *
+                  t,
+          twiixY -
+              sin(raw * pi) * 10,
+        )
+        ..scale =
+            Vector2.all(1.0 - raw * 0.12)
+        ..angle = raw * 0.08;
 
-      twiixDroit.position = Vector2(
-        (size.x * 0.57) +
-            ((size.x + 110) - (size.x * 0.57)) * t,
-        twiixY,
-      );
+      final goPulse =
+          1.15 + sin(raw * pi) * 0.30;
 
-      twiixGauche.scale = Vector2.all(1.0);
-      twiixDroit.scale = Vector2.all(1.0);
-
-      _startIntroText?.scale = Vector2.all(1.15);
+      _startIntroText?.scale =
+          Vector2.all(goPulse);
 
       return;
     }
 
     // --------------------------------------------------------
-    // FIN : démarrage réel de la Run
+    // FIN : lancement réel de la Run
     // --------------------------------------------------------
     _startIntroActive = false;
     _startIntroTimer = 0;
+    _startIntroImpactTriggered = false;
 
     _startIntroText?.removeFromParent();
     _startIntroText = null;
@@ -1277,6 +1406,14 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     atmosphereOverlay
       ..color = Colors.transparent
       ..opacity = 0;
+
+    twiixGauche
+      ..scale = Vector2.all(1.0)
+      ..angle = 0;
+
+    twiixDroit
+      ..scale = Vector2.all(1.0)
+      ..angle = 0;
 
     _hideTwiix();
 
