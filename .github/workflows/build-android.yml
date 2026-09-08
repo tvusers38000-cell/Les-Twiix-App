@@ -46,14 +46,33 @@ jobs:
           import base64
           from pathlib import Path
 
-          value = os.environ["TWIIX_KEYSTORE_BASE64"].strip()
-          value = value.strip('"').strip("'")
-          value = "".join(value.split())
+          import re
+
+          raw = os.environ["TWIIX_KEYSTORE_BASE64"]
+
+          candidates = re.findall(
+              r"[A-Za-z0-9+/]{100,}={0,2}",
+              raw,
+          )
+
+          if not candidates:
+              raise SystemExit(
+                  "Aucune chaine Base64 de keystore trouvee"
+              )
+
+          value = max(candidates, key=len)
 
           try:
               data = base64.b64decode(value, validate=True)
           except Exception as e:
-              raise SystemExit(f"Keystore Base64 invalide: {e}")
+              raise SystemExit(
+                  f"Keystore Base64 invalide: {e}"
+              )
+
+          if len(data) < 1000:
+              raise SystemExit(
+                  f"Keystore decode trop petit: {len(data)} octets"
+              )
 
           Path("android/app/les-twiix-upload.jks").write_bytes(data)
           print(f"Keystore decode OK ({len(data)} bytes)")
