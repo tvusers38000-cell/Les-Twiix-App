@@ -1772,11 +1772,21 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         distance + extraDistance;
   }
 
+  void _unlockTwiixBadge(String key) {
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool(key, true),
+    );
+  }
+
   void _activateTwiixGauche() {
     _visibleTwiixEvent = 1;
     _twiixVisualTimer = 3.2;
     _twiixVisualDuration = 3.2;
     _zinBoostTimer = 6.0;
+
+    _unlockTwiixBadge(
+      'mascotte_run_badge_twiix_gauche',
+    );
 
     _showTwiixBanner(
       'TWIIX GAUCHE',
@@ -1795,6 +1805,10 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
     _twiixVisualDuration = 3.2;
     _ballRainTimer = 8.0;
 
+    _unlockTwiixBadge(
+      'mascotte_run_badge_twiix_droit',
+    );
+
     _showTwiixBanner(
       'TWIIX DROIT',
       'PLUIE DE BALLONS !',
@@ -1810,6 +1824,10 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
   void _activateModeTwiix() {
     _modeTwiixTriggered = true;
+
+    _unlockTwiixBadge(
+      'mascotte_run_badge_3_2_zin',
+    );
 
     _visibleTwiixEvent = 3;
     _twiixVisualTimer = 4.0;

@@ -5089,6 +5089,7 @@ class _MascotteRunBadgesPageState
     extends State<MascotteRunBadgesPage> {
   int _bestDistance = 0;
   Set<String> _unlockedLegendary = <String>{};
+  Set<String> _unlockedTwiix = <String>{};
 
   static const List<Map<String, dynamic>> _distanceBadges = [
     {
@@ -5147,6 +5148,31 @@ class _MascotteRunBadgesPageState
     },
   ];
 
+  static const List<Map<String, dynamic>> _twiixBadges = [
+    {
+      'key': 'mascotte_run_badge_twiix_gauche',
+      'title': 'Twiix Gauche',
+      'subtitle': 'Déclenche BOOST ZIN !',
+      'asset':
+          'assets/images/badges/mascotte_run/twiix_gauche.png',
+    },
+    {
+      'key': 'mascotte_run_badge_twiix_droit',
+      'title': 'Twiix Droit',
+      'subtitle': 'Déclenche PLUIE DE BALLONS !',
+      'asset':
+          'assets/images/badges/mascotte_run/twiix_droit.png',
+    },
+    {
+      'key': 'mascotte_run_badge_3_2_zin',
+      'title': '3, 2, ZIN !',
+      'subtitle': 'Déclenche le MODE TWIIX ×2',
+      'asset':
+          'assets/images/badges/mascotte_run/3_2_zin.png',
+    },
+  ];
+
+
   @override
   void initState() {
     super.initState();
@@ -5173,11 +5199,26 @@ class _MascotteRunBadgesPageState
       }
     }
 
+    const twiixKeys = [
+      'mascotte_run_badge_twiix_gauche',
+      'mascotte_run_badge_twiix_droit',
+      'mascotte_run_badge_3_2_zin',
+    ];
+
+    final twiix = <String>{};
+
+    for (final key in twiixKeys) {
+      if (prefs.getBool(key) == true) {
+        twiix.add(key);
+      }
+    }
+
     if (!mounted) return;
 
     setState(() {
       _bestDistance = best;
       _unlockedLegendary = legendary;
+      _unlockedTwiix = twiix;
     });
   }
 
@@ -5351,6 +5392,27 @@ class _MascotteRunBadgesPageState
             const SizedBox(height: 14),
             for (final badge in _distanceBadges)
               _buildDistanceBadge(badge),
+            const SizedBox(height: 22),
+            const Text(
+              'BADGES TWIIX',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              '${_unlockedTwiix.length} / 3 badges Twiix débloqués',
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 14),
+            for (final badge in _twiixBadges)
+              _buildTwiixBadge(badge),
             const SizedBox(height: 22),
             Row(
               children: [
@@ -5559,6 +5621,178 @@ class _MascotteRunBadgesPageState
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTwiixBadge(
+    Map<String, dynamic> badge,
+  ) {
+    final key = badge['key'] as String;
+    final title = badge['title'] as String;
+    final asset = badge['asset'] as String;
+    final subtitle = badge['subtitle'] as String;
+
+    final unlocked = _unlockedTwiix.contains(key);
+
+    return GestureDetector(
+      onTap: () => _openBadge(
+        asset: asset,
+        title: title,
+        unlocked: unlocked,
+        subtitle: unlocked
+            ? 'Badge Twiix débloqué'
+            : subtitle,
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF121218),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: unlocked
+                ? const Color(0xFFFF4081)
+                    .withValues(alpha: 0.45)
+                : Colors.white12,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(
+                      top: Radius.circular(21),
+                    ),
+                    child: Container(
+                      color: const Color(0xFF0B0B10),
+                      child: ColorFiltered(
+                        colorFilter: unlocked
+                            ? const ColorFilter.mode(
+                                Colors.transparent,
+                                BlendMode.dst,
+                              )
+                            : const ColorFilter.mode(
+                                Color(0xFF555555),
+                                BlendMode.saturation,
+                              ),
+                        child: Opacity(
+                          opacity: unlocked ? 1.0 : 0.42,
+                          child: Image.asset(
+                            asset,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                if (!unlocked)
+                  const Positioned.fill(
+                    child: Center(
+                      child: CircleAvatar(
+                        radius: 34,
+                        backgroundColor:
+                            Color(0xCC09090D),
+                        child: Icon(
+                          Icons.lock_rounded,
+                          color: Colors.white,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xCC09090D),
+                      borderRadius:
+                          BorderRadius.circular(18),
+                    ),
+                    child: const Text(
+                      'TWIIX',
+                      style: TextStyle(
+                        color: Color(0xFFFFD54F),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Icon(
+                    unlocked
+                        ? Icons.bolt_rounded
+                        : Icons.lock_rounded,
+                    color: unlocked
+                        ? const Color(0xFFFFD54F)
+                        : Colors.white38,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: unlocked
+                                ? Colors.white
+                                : Colors.white70,
+                            fontSize: 18,
+                            fontWeight:
+                                FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          unlocked
+                              ? 'Débloqué'
+                              : subtitle,
+                          style: TextStyle(
+                            color: unlocked
+                                ? const Color(
+                                    0xFFFFD54F,
+                                  )
+                                : Colors.white38,
+                            fontSize: 12,
+                            fontWeight:
+                                FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    unlocked
+                        ? Icons.check_circle_rounded
+                        : Icons.lock_rounded,
+                    color: unlocked
+                        ? const Color(0xFFFFD54F)
+                        : Colors.white38,
                   ),
                 ],
               ),
