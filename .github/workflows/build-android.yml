@@ -41,7 +41,23 @@ jobs:
           : "${TWIIX_KEY_PASSWORD:?Missing TWIIX_KEY_PASSWORD}"
           : "${TWIIX_KEY_ALIAS:?Missing TWIIX_KEY_ALIAS}"
 
-          echo "$TWIIX_KEYSTORE_BASE64" | base64 --decode > android/app/les-twiix-upload.jks
+          python - <<'PY2'
+          import os
+          import base64
+          from pathlib import Path
+
+          value = os.environ["TWIIX_KEYSTORE_BASE64"].strip()
+          value = value.strip('"').strip("'")
+          value = "".join(value.split())
+
+          try:
+              data = base64.b64decode(value, validate=True)
+          except Exception as e:
+              raise SystemExit(f"Keystore Base64 invalide: {e}")
+
+          Path("android/app/les-twiix-upload.jks").write_bytes(data)
+          print(f"Keystore decode OK ({len(data)} bytes)")
+          PY2
 
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=les-twiix-upload.jks\n'             "$TWIIX_KEYSTORE_PASSWORD"             "$TWIIX_KEY_PASSWORD"             "$TWIIX_KEY_ALIAS"             > android/key.properties
 
