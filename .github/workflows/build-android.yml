@@ -31,14 +31,12 @@ jobs:
         env:
           TWIIX_KEYSTORE_BASE64: ${{ secrets.TWIIX_KEYSTORE_BASE64 }}
           TWIIX_KEYSTORE_PASSWORD: ${{ secrets.TWIIX_KEYSTORE_PASSWORD }}
-          TWIIX_KEY_PASSWORD: ${{ secrets.TWIIX_KEY_PASSWORD }}
           TWIIX_KEY_ALIAS: ${{ secrets.TWIIX_KEY_ALIAS }}
         run: |
           set -e
 
           : "${TWIIX_KEYSTORE_BASE64:?Missing TWIIX_KEYSTORE_BASE64}"
           : "${TWIIX_KEYSTORE_PASSWORD:?Missing TWIIX_KEYSTORE_PASSWORD}"
-          : "${TWIIX_KEY_PASSWORD:?Missing TWIIX_KEY_PASSWORD}"
           : "${TWIIX_KEY_ALIAS:?Missing TWIIX_KEY_ALIAS}"
 
           python - <<'PY2'
