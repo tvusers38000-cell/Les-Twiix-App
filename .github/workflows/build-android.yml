@@ -78,6 +78,15 @@ jobs:
 
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=les-twiix-upload.jks\n'             "$TWIIX_KEYSTORE_PASSWORD"             "$TWIIX_KEY_PASSWORD"             "$TWIIX_KEY_ALIAS"             > android/key.properties
 
+          echo "=== SIGNING DIAGNOSTIC ==="
+          echo "REMOTE_KEYSTORE_SIZE=$(wc -c < android/app/les-twiix-upload.jks)"
+          echo "REMOTE_PASSWORD_LENGTH=${#TWIIX_KEYSTORE_PASSWORD}"
+          sha256sum android/app/les-twiix-upload.jks
+
+          keytool -list             -keystore android/app/les-twiix-upload.jks             -storepass "$TWIIX_KEYSTORE_PASSWORD"             -alias "$TWIIX_KEY_ALIAS"             >/dev/null
+
+          echo "REMOTE KEYSTORE + PASSWORD : OK"
+
           python scripts/configure_android_signing.py
 
       - name: Configure Android scheduled notifications
