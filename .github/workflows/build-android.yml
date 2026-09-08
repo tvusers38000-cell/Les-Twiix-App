@@ -27,6 +27,81 @@ jobs:
       - name: Generate platform folders if missing
         run: flutter create . --platforms=android,ios --org com.lestwiix
 
+      - name: Configure Android signing
+        env:
+          TWIIX_KEYSTORE_BASE64: ${{ secrets.TWIIX_KEYSTORE_BASE64 }}
+          TWIIX_KEYSTORE_PASSWORD: ${{ secrets.TWIIX_KEYSTORE_PASSWORD }}
+          TWIIX_KEY_PASSWORD: ${{ secrets.TWIIX_KEY_PASSWORD }}
+          TWIIX_KEY_ALIAS: ${{ secrets.TWIIX_KEY_ALIAS }}
+        run: |
+          set -e
+
+          echo "$TWIIX_KEYSTORE_BASE64" | base64 --decode > android/app/les-twiix-upload.jks
+
+          cat > android/key.properties <<EOF
+          storePassword=$TWIIX_KEYSTORE_PASSWORD
+          keyPassword=$TWIIX_KEY_PASSWORD
+          keyAlias=$TWIIX_KEY_ALIAS
+          storeFile=les-twiix-upload.jks
+          EOF
+
+          python - <<'PY2'
+          from pathlib import Path
+
+          kts = Path("android/app/build.gradle.kts")
+
+          if not kts.exists():
+              raise SystemExit("build.gradle.kts introuvable")
+
+          s = kts.read_text()
+
+          if 'import java.util.Properties' not in s:
+              s = '''import java.util.Properties
+import java.io.FileInputStream
+
+''' + s
+
+          android_marker = 'android {'
+          if android_marker not in s:
+              raise SystemExit("bloc android introuvable")
+
+          signing_block = '''
+    val keystoreProperties = Properties()
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+        }
+    }
+
+'''
+
+          if 'signingConfigs {' not in s:
+              s = s.replace(
+                  android_marker,
+                  android_marker + signing_block,
+                  1,
+              )
+
+          old = 'signingConfig = signingConfigs.getByName("debug")'
+          new = 'signingConfig = signingConfigs.getByName("release")'
+
+          if old in s:
+              s = s.replace(old, new, 1)
+          elif new not in s:
+              raise SystemExit("signingConfig release introuvable")
+
+          kts.write_text(s)
+          print("SIGNING GRADLE OK")
+          PY2
+
       - name: Configure Android scheduled notifications
         run: bash scripts/configure_android_notifications.sh
 
