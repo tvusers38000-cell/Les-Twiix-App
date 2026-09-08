@@ -76,7 +76,7 @@ jobs:
           print(f"Keystore decode OK ({len(data)} bytes)")
           PY2
 
-          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=les-twiix-upload.jks\n'             "$TWIIX_KEYSTORE_PASSWORD"             "$TWIIX_KEY_PASSWORD"             "$TWIIX_KEY_ALIAS"             > android/key.properties
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=les-twiix-upload.jks\n'             "$TWIIX_KEYSTORE_PASSWORD"             "$TWIIX_KEYSTORE_PASSWORD"             "$TWIIX_KEY_ALIAS"             > android/key.properties
 
           echo "=== SIGNING DIAGNOSTIC ==="
           echo "REMOTE_KEYSTORE_SIZE=$(wc -c < android/app/les-twiix-upload.jks)"
