@@ -547,7 +547,34 @@ Future<void> deleteLive(String title, DateTime? scheduledAt) async {    Query qu
     notifyListeners();
   }
 
-  Future<void> addDonor(String name, int points) async { donors.add(Donor(name, points)); donors.sort((a,b) => b.points.compareTo(a.points)); notifyListeners(); await _save(); }
+  Future<void> addDonor(String name, int points) async {
+    donors.add(Donor(name, points));
+    donors.sort((a, b) => b.points.compareTo(a.points));
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> updateDonor(
+    Donor donor,
+    String name,
+    int points,
+  ) async {
+    donor.name = name.trim();
+    donor.points = points;
+
+    donors.sort((a, b) => b.points.compareTo(a.points));
+
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> deleteDonor(Donor donor) async {
+    donors.remove(donor);
+    donors.sort((a, b) => b.points.compareTo(a.points));
+
+    notifyListeners();
+    await _save();
+  }
   Future<void> addChallenge(
     String title,
     String subtitle,
@@ -3596,6 +3623,11 @@ class AdminPage extends StatelessWidget {
       AdminAction(icon: Icons.calendar_month, title: 'Ajouter un live', onTap: () => _liveDialog(context, state)),
       AdminAction(icon: Icons.delete_outline, title: 'Gérer les lives', onTap: () => _manageLivesDialog(context, state)),
       AdminAction(icon: Icons.workspace_premium, title: 'Ajouter un donateur', onTap: () => _donorDialog(context, state)),
+      AdminAction(
+        icon: Icons.manage_accounts_outlined,
+        title: 'Gérer les donateurs',
+        onTap: () => _manageDonorsDialog(context, state),
+      ),
       AdminAction(icon: Icons.auto_awesome, title: 'Bibliothèque de défis', onTap: () => _challengeLibraryDialog(context, state)),
       AdminAction(icon: Icons.emoji_events, title: 'Créer un défi', onTap: () => _challengeDialog(context, state)),
       AdminAction(icon: Icons.poll_outlined, title: 'Créer un sondage', onTap: () => _pollDialog(context, state)),
@@ -3743,6 +3775,179 @@ Future<void> _donorDialog(BuildContext context, TwiixState state) async {
   final a = TextEditingController(), b = TextEditingController();
   await _formDialog(context, 'Ajouter un donateur', [('Pseudo', a), ('Points', b)], () async { final pts = int.tryParse(b.text.trim()) ?? 0; if (a.text.trim().isNotEmpty) await state.addDonor(a.text.trim(), pts); });
 }
+
+Future<void> _editDonorDialog(
+  BuildContext context,
+  TwiixState state,
+  Donor donor,
+) async {
+  final nameController = TextEditingController(text: donor.name);
+  final pointsController =
+      TextEditingController(text: donor.points.toString());
+
+  await _formDialog(
+    context,
+    'Modifier le donateur',
+    [
+      ('Pseudo', nameController),
+      ('Points', pointsController),
+    ],
+    () async {
+      final name = nameController.text.trim();
+      final points = int.tryParse(pointsController.text.trim()) ?? 0;
+
+      if (name.isEmpty) return;
+
+      await state.updateDonor(
+        donor,
+        name,
+        points,
+      );
+    },
+  );
+}
+
+Future<void> _deleteDonorDialog(
+  BuildContext context,
+  TwiixState state,
+  Donor donor,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Supprimer ce donateur ?'),
+      content: Text(
+        'Voulez-vous vraiment supprimer ${donor.name} du Hall of Fame ?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Annuler'),
+        ),
+        FilledButton.icon(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          icon: const Icon(Icons.delete_outline),
+          label: const Text('Supprimer'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true) return;
+
+  await state.deleteDonor(donor);
+
+  if (!context.mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('${donor.name} a été supprimé.'),
+    ),
+  );
+}
+
+Future<void> _manageDonorsDialog(
+  BuildContext context,
+  TwiixState state,
+) async {
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Gérer les donateurs'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListenableBuilder(
+          listenable: state,
+          builder: (context, _) {
+            final sorted = [...state.donors]
+              ..sort((a, b) => b.points.compareTo(a.points));
+
+            if (sorted.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  'Aucun donateur pour le moment.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white60),
+                ),
+              );
+            }
+
+            return ListView.separated(
+              shrinkWrap: true,
+              itemCount: sorted.length,
+              separatorBuilder: (_, __) =>
+                  const Divider(color: Color(0x22FFFFFF)),
+              itemBuilder: (context, i) {
+                final donor = sorted[i];
+
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFF181820),
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    donor.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${donor.points} pts',
+                    style: const TextStyle(
+                      color: Colors.white60,
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Modifier',
+                        onPressed: () => _editDonorDialog(
+                          dialogContext,
+                          state,
+                          donor,
+                        ),
+                        icon: const Icon(
+                          Icons.edit_outlined,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Supprimer',
+                        onPressed: () => _deleteDonorDialog(
+                          dialogContext,
+                          state,
+                          donor,
+                        ),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Fermer'),
+        ),
+      ],
+    ),
+  );
+}
+
 Future<void> _challengeDialog(BuildContext context, TwiixState state) async {
   final a = TextEditingController(), b = TextEditingController(), c = TextEditingController();
   await _formDialog(context, 'Créer un défi', [('Nom', a), ('Description', b), ('Points', c)], () async { final pts = int.tryParse(c.text.trim()) ?? 0; if (a.text.trim().isNotEmpty) await state.addChallenge(a.text.trim(), b.text.trim(), pts); });
@@ -4014,9 +4219,242 @@ class ChallengeCard extends StatelessWidget {
   @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(16), decoration: cardDecoration(), child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)), const SizedBox(height: 6), Text(subtitle, style: const TextStyle(color: Colors.white60))])), Text('+$points pts', style: const TextStyle(color: Color(0xFFFFD34E), fontWeight: FontWeight.w900))]));
 }
 class DonorTile extends StatelessWidget {
-  final int rank; final Donor donor;
-  const DonorTile({super.key, required this.rank, required this.donor});
-  @override Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(bottom: 9), padding: const EdgeInsets.all(14), decoration: cardDecoration(), child: Row(children: [SizedBox(width: 34, child: Text('$rank', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: rank <= 3 ? const Color(0xFFFFD34E) : Colors.white70))), const CircleAvatar(radius: 19, backgroundImage: AssetImage('assets/images/twiix_profile_logo.png')), const SizedBox(width: 11), Expanded(child: Text(donor.name, style: const TextStyle(fontWeight: FontWeight.w800))), Text('${donor.points} pts', style: const TextStyle(color: pink, fontWeight: FontWeight.w800))]));
+  final int rank;
+  final Donor donor;
+
+  const DonorTile({
+    super.key,
+    required this.rank,
+    required this.donor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isTopThree = rank <= 3;
+
+    Color rankColor;
+
+    switch (rank) {
+      case 1:
+        rankColor = const Color(0xFFFFD700);
+        break;
+      case 2:
+        rankColor = const Color(0xFFC0C0C0);
+        break;
+      case 3:
+        rankColor = const Color(0xFFCD7F32);
+        break;
+      default:
+        rankColor = Colors.white54;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: isTopThree ? 15 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111117),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isTopThree
+              ? rankColor.withValues(alpha: 0.55)
+              : const Color(0x22FFFFFF),
+          width: isTopThree ? 1.5 : 1,
+        ),
+        boxShadow: isTopThree
+            ? [
+                BoxShadow(
+                  color: rankColor.withValues(alpha: 0.12),
+                  blurRadius: 18,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 38,
+            child: Text(
+              '$rank',
+              style: TextStyle(
+                fontSize: isTopThree ? 23 : 19,
+                fontWeight: FontWeight.w900,
+                color: rankColor,
+              ),
+            ),
+          ),
+
+          _DonorProfileAvatar(
+            rank: rank,
+          ),
+
+          const SizedBox(width: 13),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  donor.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: isTopThree ? 17 : 15,
+                  ),
+                ),
+                if (isTopThree) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    rank == 1
+                        ? 'Champion du Hall of Fame'
+                        : rank == 2
+                            ? 'Top supporter'
+                            : 'Podium Les Twiix',
+                    style: TextStyle(
+                      color: rankColor.withValues(alpha: 0.85),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          Text(
+            '${donor.points} pts',
+            style: TextStyle(
+              color: isTopThree ? rankColor : pink,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DonorProfileAvatar extends StatelessWidget {
+  final int rank;
+
+  const _DonorProfileAvatar({
+    required this.rank,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (rank > 3) {
+      return const CircleAvatar(
+        radius: 20,
+        backgroundImage: AssetImage(
+          'assets/images/twiix_profile_logo.png',
+        ),
+      );
+    }
+
+    late final Color rankColor;
+    late final IconData badgeIcon;
+
+    switch (rank) {
+      case 1:
+        rankColor = const Color(0xFFFFD700);
+        badgeIcon = Icons.workspace_premium;
+        break;
+      case 2:
+        rankColor = const Color(0xFFC0C0C0);
+        badgeIcon = Icons.military_tech;
+        break;
+      default:
+        rankColor = const Color(0xFFCD7F32);
+        badgeIcon = Icons.military_tech;
+    }
+
+    return SizedBox(
+      width: 58,
+      height: 58,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: rankColor.withValues(alpha: 0.35),
+                  blurRadius: 14,
+                  spreadRadius: 2,
+                ),
+              ],
+              border: Border.all(
+                color: rankColor,
+                width: 3,
+              ),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: const CircleAvatar(
+              backgroundColor: Color(0xFF0D0D12),
+              backgroundImage: AssetImage(
+                'assets/images/twiix_profile_logo.png',
+              ),
+            ),
+          ),
+
+          Positioned(
+            top: -7,
+            right: -2,
+            child: Container(
+              width: 25,
+              height: 25,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF111117),
+                border: Border.all(
+                  color: rankColor,
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                badgeIcon,
+                size: 16,
+                color: rankColor,
+              ),
+            ),
+          ),
+
+          Positioned(
+            bottom: -5,
+            left: -1,
+            child: Container(
+              width: 23,
+              height: 23,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: rankColor,
+                border: Border.all(
+                  color: const Color(0xFF111117),
+                  width: 2,
+                ),
+              ),
+              child: Text(
+                '$rank',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 BoxDecoration cardDecoration() => BoxDecoration(color: const Color(0xFF111117), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0x22FFFFFF)));
