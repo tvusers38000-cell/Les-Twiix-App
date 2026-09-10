@@ -127,3 +127,37 @@ jobs:
         with:
           name: Les-Twiix-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+
+  ios-check:
+    name: Check iOS compatibility
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate iOS platform
+        run: flutter create . --platforms=ios --org com.lestwiix
+
+      - name: Add Firebase iOS config
+        run: cp firebase/ios/GoogleService-Info.plist ios/Runner/GoogleService-Info.plist
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze lib
+
+      - name: Verify iOS Bundle ID
+        run: |
+          grep -R "PRODUCT_BUNDLE_IDENTIFIER" ios/Runner.xcodeproj/project.pbxproj
+          grep -A1 "BUNDLE_ID" firebase/ios/GoogleService-Info.plist
+
+      - name: Build iOS without signing
+        run: flutter build ios --release --no-codesign
