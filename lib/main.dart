@@ -1542,14 +1542,138 @@ class ChallengesPage extends StatelessWidget {
 class DonorsPage extends StatelessWidget {
   final TwiixState state;
   const DonorsPage({super.key, required this.state});
-  @override Widget build(BuildContext context) {
-    final sorted = [...state.donors]..sort((a,b) => b.points.compareTo(a.points));
-    return PageFrame(title: 'Hall of Fame', children: [
-      const Text('TOP DONATEURS', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6), const Text('Classement de démonstration', style: TextStyle(color: Colors.white60)), const SizedBox(height: 16),
-      ...List.generate(sorted.length, (i) => DonorTile(rank: i + 1, donor: sorted[i])),
-      const SizedBox(height: 18), const InfoCard(icon: Icons.privacy_tip_outlined, title: 'Respect de la vie privée', subtitle: 'Un donateur pourra masquer son montant ou choisir de ne pas apparaître publiquement.'),
-    ]);
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...state.donors]
+      ..sort((a, b) => b.points.compareTo(a.points));
+
+    return PageFrame(
+      title: 'Donateurs',
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111117),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(0x33FF2C7D),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 62,
+                height: 62,
+                decoration: const BoxDecoration(
+                  color: Color(0x22FF2C7D),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  color: Color(0xFFFF2C7D),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'SOUTENIR LES TWIIX',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Vous aimez l’aventure Les Twiix ? Vous pouvez nous soutenir avec un don libre.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Aucune récompense, aucun Twiix Point et aucun avantage n’est accordé en échange.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF2C7D),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Le lien de don sera bientôt disponible',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.volunteer_activism_rounded),
+                  label: const Text(
+                    'FAIRE UN DON',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 28),
+
+        const Text(
+          'TOP DONATEURS',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Hall of Fame',
+          style: TextStyle(color: Colors.white60),
+        ),
+        const SizedBox(height: 16),
+
+        ...List.generate(
+          sorted.length,
+          (i) => DonorTile(
+            rank: i + 1,
+            donor: sorted[i],
+          ),
+        ),
+
+        const SizedBox(height: 18),
+
+        const InfoCard(
+          icon: Icons.privacy_tip_outlined,
+          title: 'Respect de la vie privée',
+          subtitle:
+              'Un donateur pourra masquer son montant ou choisir de ne pas apparaître publiquement.',
+        ),
+      ],
+    );
   }
 }
 
