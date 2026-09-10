@@ -1030,10 +1030,16 @@ class HomePage extends StatelessWidget {
           children: [
             Expanded(
               child: MiniAction(
-                icon: Icons.workspace_premium_outlined,
-                title: 'Top donateurs',
-                subtitle: 'Hall of Fame',
-                onTap: () => onNavigate(3),
+                icon: Icons.shopping_bag_outlined,
+                title: 'Boutique',
+                subtitle: 'Merch Les Twiix',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Boutique bientôt disponible'),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 10),
