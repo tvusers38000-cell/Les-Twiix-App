@@ -2877,6 +2877,214 @@ class ProfilePage extends StatelessWidget {
     await FirebaseAuth.instance.signInAnonymously();
   }
 
+
+  Future<void> _deleteCollection(
+    CollectionReference<Map<String, dynamic>> collection,
+  ) async {
+    final snapshot = await collection.get();
+    for (final doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
+  }
+
+  Future<void> deleteAccount(
+    BuildContext context,
+    User user,
+    String password,
+  ) async {
+    final email = user.email;
+
+    if (email == null || email.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-email',
+        message: 'Adresse e-mail introuvable.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
+
+    await user.reauthenticateWithCredential(credential);
+
+    final firestore = FirebaseFirestore.instance;
+    final uid = user.uid;
+    final userRef = firestore.collection('users').doc(uid);
+
+    await _deleteCollection(userRef.collection('badges'));
+    await _deleteCollection(userRef.collection('progress'));
+    await _deleteCollection(userRef.collection('challengeRewards'));
+    await _deleteCollection(userRef.collection('liveReminders'));
+
+    final polls = await firestore.collection('polls').get();
+    for (final poll in polls.docs) {
+      final voteRef = poll.reference.collection('votes').doc(uid);
+      final vote = await voteRef.get();
+      if (vote.exists) {
+        await voteRef.delete();
+      }
+    }
+
+    await firestore.collection('mascotte_run_scores').doc(uid).delete();
+    await userRef.delete();
+
+    await user.delete();
+
+    await FirebaseAuth.instance.signInAnonymously();
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Ton compte Twiix et tes données ont été supprimés.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> confirmDeleteAccount(
+    BuildContext context,
+    User user,
+  ) async {
+    final passwordController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        bool deleting = false;
+        String? error;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Supprimer mon compte ?'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Cette action est définitive. Ton profil, tes Twiix Points, '
+                    'tes badges, tes participations et ton score Mascotte Run '
+                    'seront supprimés.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    enabled: !deleting,
+                    decoration: const InputDecoration(
+                      labelText: 'Mot de passe',
+                      hintText: 'Confirme ton mot de passe',
+                    ),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      error!,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: deleting
+                      ? null
+                      : () => Navigator.pop(dialogContext, false),
+                  child: const Text('Annuler'),
+                ),
+                FilledButton(
+                  onPressed: deleting
+                      ? null
+                      : () async {
+                          final password =
+                              passwordController.text.trim();
+
+                          if (password.isEmpty) {
+                            setDialogState(
+                              () => error =
+                                  'Entre ton mot de passe pour confirmer.',
+                            );
+                            return;
+                          }
+
+                          setDialogState(() {
+                            deleting = true;
+                            error = null;
+                          });
+
+                          try {
+                            await deleteAccount(
+                              context,
+                              user,
+                              password,
+                            );
+
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext, true);
+                            }
+                          } on FirebaseAuthException catch (e) {
+                            String message =
+                                'Impossible de supprimer le compte.';
+
+                            if (e.code == 'wrong-password' ||
+                                e.code == 'invalid-credential') {
+                              message = 'Mot de passe incorrect.';
+                            } else if (e.code == 'too-many-requests') {
+                              message =
+                                  'Trop de tentatives. Réessaie plus tard.';
+                            } else if (e.code == 'requires-recent-login') {
+                              message =
+                                  'Reconnecte-toi puis réessaie.';
+                            }
+
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                deleting = false;
+                                error = message;
+                              });
+                            }
+                          } catch (_) {
+                            if (dialogContext.mounted) {
+                              setDialogState(() {
+                                deleting = false;
+                                error =
+                                    'La suppression a échoué. Réessaie plus tard.';
+                              });
+                            }
+                          }
+                        },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
+                  child: deleting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Supprimer définitivement'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    passwordController.dispose();
+
+    if (confirmed != true) return;
+  }
+
   Future<void> openAdmin(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -3276,6 +3484,16 @@ class ProfilePage extends StatelessWidget {
                   },
                   icon: const Icon(Icons.logout),
                   label: const Text('Se déconnecter'),
+                ),
+                const SizedBox(height: 18),
+                OutlinedButton.icon(
+                  onPressed: () => confirmDeleteAccount(context, user),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                  ),
+                  icon: const Icon(Icons.delete_forever_outlined),
+                  label: const Text('Supprimer mon compte'),
                 ),
               ],
             );
