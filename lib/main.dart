@@ -1015,10 +1015,16 @@ class HomePage extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: MiniAction(
-                icon: Icons.military_tech_outlined,
-                title: 'Classement',
-                subtitle: 'Twiix Points',
-                onTap: () => onNavigate(2),
+                icon: Icons.share_outlined,
+                title: 'Nos Réseaux',
+                subtitle: 'Suivez Les Twiix',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Nos réseaux bientôt disponibles'),
+                    ),
+                  );
+                },
               ),
             ),
           ],
