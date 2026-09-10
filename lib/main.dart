@@ -1314,7 +1314,7 @@ class SocialNetworksPage extends StatelessWidget {
           color: const Color(0xFF111116),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: Colors.white.withOpacity(0.12),
+            color: Colors.white.withValues(alpha: 0.12),
           ),
         ),
         child: Column(
