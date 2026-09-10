@@ -1551,6 +1551,39 @@ class DonorsPage extends StatelessWidget {
     return PageFrame(
       title: 'Donateurs',
       children: [
+        const Text(
+          'TOP DONATEURS',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Hall of Fame',
+          style: TextStyle(color: Colors.white60),
+        ),
+        const SizedBox(height: 16),
+
+        ...List.generate(
+          sorted.length,
+          (i) => DonorTile(
+            rank: i + 1,
+            donor: sorted[i],
+          ),
+        ),
+
+        const SizedBox(height: 18),
+
+        const InfoCard(
+          icon: Icons.privacy_tip_outlined,
+          title: 'Respect de la vie privée',
+          subtitle:
+              'Un donateur pourra masquer son montant ou choisir de ne pas apparaître publiquement.',
+        ),
+
+        const SizedBox(height: 28),
+
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
@@ -1640,38 +1673,7 @@ class DonorsPage extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 28),
 
-        const Text(
-          'TOP DONATEURS',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Hall of Fame',
-          style: TextStyle(color: Colors.white60),
-        ),
-        const SizedBox(height: 16),
-
-        ...List.generate(
-          sorted.length,
-          (i) => DonorTile(
-            rank: i + 1,
-            donor: sorted[i],
-          ),
-        ),
-
-        const SizedBox(height: 18),
-
-        const InfoCard(
-          icon: Icons.privacy_tip_outlined,
-          title: 'Respect de la vie privée',
-          subtitle:
-              'Un donateur pourra masquer son montant ou choisir de ne pas apparaître publiquement.',
-        ),
       ],
     );
   }
