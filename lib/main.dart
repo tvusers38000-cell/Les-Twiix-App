@@ -1039,13 +1039,12 @@ class HomePage extends StatelessWidget {
                 icon: Icons.shopping_bag_outlined,
                 title: 'Boutique',
                 subtitle: 'Merch Les Twiix',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Boutique bientôt disponible'),
-                    ),
-                  );
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const BoutiquePage(),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -1270,6 +1269,113 @@ class LivesPage extends StatelessWidget {
   ]);
 }
 
+
+
+class BoutiquePage extends StatelessWidget {
+  const BoutiquePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF07070B),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF07070B),
+        elevation: 0,
+        title: const Text(
+          'Boutique',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 32),
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Image.asset(
+                'assets/images/boutique_twiix.png',
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            const Text(
+              'BOUTIQUE LES TWIIX',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            const Text(
+              'Le merch officiel Les Twiix arrive bientôt.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                height: 1.4,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            const Text(
+              'Maillots, vêtements et bien plus encore.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 14,
+              ),
+            ),
+
+            const SizedBox(height: 26),
+
+            Container(
+              height: 58,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF8E123E),
+                    Color(0xFFFF2C7D),
+                  ],
+                ),
+              ),
+              alignment: Alignment.center,
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.shopping_bag_outlined,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'BIENTÔT DISPONIBLE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class SocialNetworksPage extends StatelessWidget {
   const SocialNetworksPage({super.key});
