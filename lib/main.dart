@@ -12,6 +12,7 @@ import 'loyal_qg_reward.dart';
 import 'polls_10_reward.dart';
 import 'package:flame/game.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'mascotte_run_game.dart';
 
 
@@ -1018,13 +1019,12 @@ class HomePage extends StatelessWidget {
                 icon: Icons.share_outlined,
                 title: 'Nos Réseaux',
                 subtitle: 'Suivez Les Twiix',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Nos réseaux bientôt disponibles'),
-                    ),
-                  );
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SocialNetworksPage(),
+                  ),
+                ),
               ),
             ),
           ],
@@ -1268,6 +1268,161 @@ class LivesPage extends StatelessWidget {
   @override Widget build(BuildContext context) => PageFrame(title: 'Planning des lives', children: [
     ...state.lives.where((l) => l.scheduledAt == null || l.scheduledAt!.isAfter(DateTime.now())).map((l) => Padding(padding: const EdgeInsets.only(bottom: 10), child: InfoCard(icon: Icons.live_tv, title: '${l.day} • ${l.time}', subtitle: l.title, trailing: 'Rappel', onTrailingTap: () => activateLiveReminder(context, l)))),
   ]);
+}
+
+
+class SocialNetworksPage extends StatelessWidget {
+  const SocialNetworksPage({super.key});
+
+  static final Uri _instagramUri = Uri.parse(
+    'https://www.instagram.com/les_twiix?stkn=MWxybmNwaHNsamNvbA==',
+  );
+
+  // Vérifie juste que ce lien correspond bien à votre compte réel.
+  static final Uri _tiktokUri = Uri.parse(
+    'https://www.tiktok.com/@les_twiix',
+  );
+
+  Future<void> _openUrl(BuildContext context, Uri uri) async {
+    final ok = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible d’ouvrir ce réseau pour le moment.'),
+        ),
+      );
+    }
+  }
+
+  Widget _socialCard({
+    required BuildContext context,
+    required String imagePath,
+    required String title,
+    required String subtitle,
+    required Uri uri,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () => _openUrl(context, uri),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: const Color(0xFF111116),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.12),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.asset(
+                imagePath,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFF17171D),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.image_outlined,
+                    size: 52,
+                    color: Colors.white38,
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Colors.white60,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.open_in_new_rounded,
+                    color: Color(0xFFFF2C7D),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF07070B),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF07070B),
+        elevation: 0,
+        title: const Text(
+          'Nos Réseaux',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          children: [
+            const Text(
+              'Rejoignez la communauté Les Twiix',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.white70,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            _socialCard(
+              context: context,
+              imagePath: 'assets/images/social_instagram.png',
+              title: 'Instagram',
+              subtitle: 'Coulisses, moments et actualités',
+              uri: _instagramUri,
+            ),
+
+            const SizedBox(height: 18),
+
+            _socialCard(
+              context: context,
+              imagePath: 'assets/images/social_tiktok.png',
+              title: 'TikTok',
+              subtitle: 'Lives, extraits et délires',
+              uri: _tiktokUri,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class ChallengesPage extends StatelessWidget {
