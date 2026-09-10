@@ -4232,105 +4232,270 @@ class DonorTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTopThree = rank <= 3;
 
-    Color rankColor;
+    final Color accent;
+    final Color accentSoft;
+    final IconData rankIcon;
+    final String subtitle;
 
     switch (rank) {
       case 1:
-        rankColor = const Color(0xFFFFD700);
+        accent = const Color(0xFFFFD700);
+        accentSoft = const Color(0xFF8F7400);
+        rankIcon = Icons.workspace_premium;
+        subtitle = 'Champion du Hall of Fame';
         break;
       case 2:
-        rankColor = const Color(0xFFC0C0C0);
+        accent = const Color(0xFFD7D7DF);
+        accentSoft = const Color(0xFF777783);
+        rankIcon = Icons.military_tech;
+        subtitle = 'Top supporter';
         break;
       case 3:
-        rankColor = const Color(0xFFCD7F32);
+        accent = const Color(0xFFE28A42);
+        accentSoft = const Color(0xFF7B4721);
+        rankIcon = Icons.military_tech;
+        subtitle = 'Podium Les Twiix';
         break;
       default:
-        rankColor = Colors.white54;
+        accent = Colors.white54;
+        accentSoft = Colors.white24;
+        rankIcon = Icons.star_outline;
+        subtitle = '';
+    }
+
+    if (!isTopThree) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: cardDecoration(),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 36,
+              child: Text(
+                '$rank',
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white60,
+                ),
+              ),
+            ),
+            const CircleAvatar(
+              radius: 20,
+              backgroundImage: AssetImage(
+                'assets/images/twiix_profile_logo.png',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                donor.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Text(
+              '${donor.points} pts',
+              style: const TextStyle(
+                color: pink,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: isTopThree ? 15 : 12,
-      ),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF111117),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isTopThree
-              ? rankColor.withValues(alpha: 0.55)
-              : const Color(0x22FFFFFF),
-          width: isTopThree ? 1.5 : 1,
-        ),
-        boxShadow: isTopThree
-            ? [
-                BoxShadow(
-                  color: rankColor.withValues(alpha: 0.12),
-                  blurRadius: 18,
-                  spreadRadius: 1,
-                ),
-              ]
-            : null,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: rank == 1 ? 0.24 : 0.14),
+            blurRadius: rank == 1 ? 30 : 22,
+            spreadRadius: 1,
+          ),
+        ],
       ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 38,
-            child: Text(
-              '$rank',
-              style: TextStyle(
-                fontSize: isTopThree ? 23 : 19,
-                fontWeight: FontWeight.w900,
-                color: rankColor,
-              ),
-            ),
+      child: Container(
+        padding: const EdgeInsets.all(1.7),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              accent.withValues(alpha: 0.95),
+              accentSoft.withValues(alpha: 0.45),
+              accent.withValues(alpha: 0.15),
+              accent.withValues(alpha: 0.75),
+            ],
           ),
-
-          _DonorProfileAvatar(
-            rank: rank,
-          ),
-
-          const SizedBox(width: 13),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  donor.name,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: isTopThree ? 17 : 15,
-                  ),
-                ),
-                if (isTopThree) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    rank == 1
-                        ? 'Champion du Hall of Fame'
-                        : rank == 2
-                            ? 'Top supporter'
-                            : 'Podium Les Twiix',
-                    style: TextStyle(
-                      color: rankColor.withValues(alpha: 0.85),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF18181F),
+                const Color(0xFF101015),
+                accent.withValues(alpha: 0.045),
               ],
             ),
           ),
-
-          Text(
-            '${donor.points} pts',
-            style: TextStyle(
-              color: isTopThree ? rankColor : pink,
-              fontWeight: FontWeight.w900,
-            ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -24,
+                right: -18,
+                child: Icon(
+                  rankIcon,
+                  size: 92,
+                  color: accent.withValues(alpha: 0.045),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                top: 22,
+                bottom: 22,
+                child: Container(
+                  width: 3,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: accent,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.7),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 17,
+                ),
+                child: Row(
+                  children: [
+                    _DonorRankNumber(
+                      rank: rank,
+                      accent: accent,
+                    ),
+                    const SizedBox(width: 12),
+                    _DonorProfileAvatar(
+                      rank: rank,
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            donor.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              Icon(
+                                rankIcon,
+                                size: 14,
+                                color: accent,
+                              ),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: accent.withValues(alpha: 0.88),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${donor.points}',
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          'PTS',
+                          style: TextStyle(
+                            color: accent.withValues(alpha: 0.7),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DonorRankNumber extends StatelessWidget {
+  final int rank;
+  final Color accent;
+
+  const _DonorRankNumber({
+    required this.rank,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 54,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: accent.withValues(alpha: 0.08),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Text(
+        '$rank',
+        style: TextStyle(
+          color: accent,
+          fontSize: 27,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -4345,101 +4510,125 @@ class _DonorProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (rank > 3) {
-      return const CircleAvatar(
-        radius: 20,
-        backgroundImage: AssetImage(
-          'assets/images/twiix_profile_logo.png',
-        ),
-      );
-    }
-
-    late final Color rankColor;
-    late final IconData badgeIcon;
+    final Color accent;
+    final Color accent2;
+    final IconData icon;
 
     switch (rank) {
       case 1:
-        rankColor = const Color(0xFFFFD700);
-        badgeIcon = Icons.workspace_premium;
+        accent = const Color(0xFFFFD700);
+        accent2 = const Color(0xFFFFF1A0);
+        icon = Icons.workspace_premium;
         break;
       case 2:
-        rankColor = const Color(0xFFC0C0C0);
-        badgeIcon = Icons.military_tech;
+        accent = const Color(0xFFD7D7DF);
+        accent2 = const Color(0xFFFFFFFF);
+        icon = Icons.military_tech;
         break;
       default:
-        rankColor = const Color(0xFFCD7F32);
-        badgeIcon = Icons.military_tech;
+        accent = const Color(0xFFE28A42);
+        accent2 = const Color(0xFFFFC27C);
+        icon = Icons.military_tech;
     }
 
     return SizedBox(
-      width: 58,
-      height: 58,
+      width: 66,
+      height: 66,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 62,
+            height: 62,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
+              gradient: SweepGradient(
+                colors: [
+                  accent,
+                  accent2,
+                  accent,
+                  accent.withValues(alpha: 0.35),
+                  accent,
+                ],
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: rankColor.withValues(alpha: 0.35),
-                  blurRadius: 14,
-                  spreadRadius: 2,
+                  color: accent.withValues(alpha: rank == 1 ? 0.42 : 0.28),
+                  blurRadius: rank == 1 ? 20 : 14,
+                  spreadRadius: 1,
                 ),
               ],
-              border: Border.all(
-                color: rankColor,
-                width: 3,
-              ),
             ),
-            padding: const EdgeInsets.all(3),
-            child: const CircleAvatar(
-              backgroundColor: Color(0xFF0D0D12),
-              backgroundImage: AssetImage(
-                'assets/images/twiix_profile_logo.png',
-              ),
-            ),
-          ),
-
-          Positioned(
-            top: -7,
-            right: -2,
+            padding: const EdgeInsets.all(4),
             child: Container(
-              width: 25,
-              height: 25,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF111117),
-                border: Border.all(
-                  color: rankColor,
-                  width: 2,
+                color: Color(0xFF09090D),
+              ),
+              padding: const EdgeInsets.all(3),
+              child: const CircleAvatar(
+                backgroundColor: Color(0xFF111117),
+                backgroundImage: AssetImage(
+                  'assets/images/twiix_profile_logo.png',
                 ),
               ),
+            ),
+          ),
+          Positioned(
+            top: -5,
+            right: -4,
+            child: Container(
+              width: 29,
+              height: 29,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF101015),
+                border: Border.all(
+                  color: accent,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
               child: Icon(
-                badgeIcon,
-                size: 16,
-                color: rankColor,
+                icon,
+                size: 17,
+                color: accent,
               ),
             ),
           ),
-
           Positioned(
-            bottom: -5,
-            left: -1,
+            bottom: -4,
+            left: -3,
             child: Container(
-              width: 23,
-              height: 23,
+              width: 27,
+              height: 27,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: rankColor,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    accent2,
+                    accent,
+                  ],
+                ),
                 border: Border.all(
-                  color: const Color(0xFF111117),
+                  color: const Color(0xFF101015),
                   width: 2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.35),
+                    blurRadius: 7,
+                  ),
+                ],
               ),
               child: Text(
                 '$rank',
