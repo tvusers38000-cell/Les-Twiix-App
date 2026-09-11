@@ -20,8 +20,16 @@ class NotificationService {
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const initializationSettings =
-        InitializationSettings(android: androidSettings);
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+
+    const initializationSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
 
     await _notifications.initialize(initializationSettings);
   }
@@ -34,10 +42,24 @@ class NotificationService {
         _notifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
-    final permissionGranted =
+    final androidPermissionGranted =
         await androidPlugin?.requestNotificationsPermission();
 
-    if (permissionGranted == false) {
+    if (androidPermissionGranted == false) {
+      throw Exception('Notifications refusées');
+    }
+
+    final iosPlugin =
+        _notifications.resolvePlatformSpecificImplementation<
+            DarwinFlutterLocalNotificationsPlugin>();
+
+    final iosPermissionGranted = await iosPlugin?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (iosPermissionGranted == false) {
       throw Exception('Notifications refusées');
     }
 
@@ -59,6 +81,11 @@ class NotificationService {
             'Notifications avant le début des lives Les Twiix',
         importance: Importance.high,
         priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
       ),
     );
 
