@@ -3204,6 +3204,17 @@ class ProfilePage extends StatelessWidget {
                 icon: const Icon(Icons.admin_panel_settings),
                 label: const Text('Accès Admin / Twiix'),
               ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyPolicyPage(),
+                  ),
+                ),
+                icon: const Icon(Icons.privacy_tip_outlined),
+                label: const Text('Politique de confidentialité'),
+              ),
             ],
           );
         }
@@ -3495,11 +3506,169 @@ class ProfilePage extends StatelessWidget {
                   icon: const Icon(Icons.delete_forever_outlined),
                   label: const Text('Supprimer mon compte'),
                 ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PrivacyPolicyPage(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.privacy_tip_outlined),
+                  label: const Text('Politique de confidentialité'),
+                ),
               ],
             );
           },
         );
       },
+    );
+  }
+}
+
+
+class PrivacyPolicyPage extends StatelessWidget {
+  const PrivacyPolicyPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF09090D),
+      appBar: AppBar(
+        title: const Text('Politique de confidentialité'),
+        backgroundColor: Colors.black,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: const [
+          Text(
+            'Politique de confidentialité',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Dernière mise à jour : septembre 2026',
+            style: TextStyle(color: Colors.white60),
+          ),
+          SizedBox(height: 24),
+          _PrivacySection(
+            title: '1. Données collectées',
+            text:
+                'L’application Les Twiix peut enregistrer certaines données '
+                'nécessaires à son fonctionnement, notamment ton adresse '
+                'e-mail, ton pseudo, ton identifiant utilisateur Firebase, '
+                'tes Twiix Points, tes badges, ta progression, tes votes '
+                'et ton score dans Mascotte Run.',
+          ),
+          _PrivacySection(
+            title: '2. Utilisation des données',
+            text:
+                'Ces données sont utilisées pour fournir les fonctionnalités '
+                'de l’application : compte, profil, classements, sondages, '
+                'défis, badges et progression.',
+          ),
+          _PrivacySection(
+            title: '3. Firebase',
+            text:
+                'L’application utilise Firebase Authentication et Cloud '
+                'Firestore pour gérer les comptes et enregistrer les données '
+                'nécessaires à certaines fonctionnalités.',
+          ),
+          _PrivacySection(
+            title: '4. Notifications',
+            text:
+                'L’application peut proposer des notifications locales, '
+                'notamment pour rappeler un live Les Twiix. Leur autorisation '
+                'peut être refusée ou désactivée dans les réglages du téléphone.',
+          ),
+          _PrivacySection(
+            title: '5. Informations visibles',
+            text:
+                'Certaines informations peuvent être visibles par les autres '
+                'utilisateurs lorsque la fonctionnalité le prévoit, notamment '
+                'un pseudo et un score dans un classement.',
+          ),
+          _PrivacySection(
+            title: '6. Suppression du compte',
+            text:
+                'Un membre peut supprimer son compte directement depuis '
+                'la page Mon profil. Cette action supprime le compte Firebase '
+                'et les principales données associées enregistrées par '
+                'l’application.',
+          ),
+          _PrivacySection(
+            title: '7. Conservation',
+            text:
+                'Les données sont conservées tant que le compte reste actif '
+                'ou qu’elles sont nécessaires au fonctionnement des '
+                'fonctionnalités correspondantes.',
+          ),
+          _PrivacySection(
+            title: '8. Services externes',
+            text:
+                'L’application peut contenir des liens vers des services '
+                'externes tels qu’Instagram et TikTok. Leurs propres politiques '
+                'de confidentialité s’appliquent lorsque tu les utilises.',
+          ),
+          _PrivacySection(
+            title: '9. Modifications',
+            text:
+                'Cette politique peut évoluer si les fonctionnalités de '
+                'l’application ou les services utilisés sont modifiés.',
+          ),
+          SizedBox(height: 24),
+          Text(
+            'Les Twiix',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white60,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 30),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrivacySection extends StatelessWidget {
+  final String title;
+  final String text;
+
+  const _PrivacySection({
+    required this.title,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: pink,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            text,
+            style: TextStyle(
+              height: 1.5,
+              color: Colors.white70,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
