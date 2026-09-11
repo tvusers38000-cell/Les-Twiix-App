@@ -51,7 +51,7 @@ class NotificationService {
 
     final iosPlugin =
         _notifications.resolvePlatformSpecificImplementation<
-            DarwinFlutterLocalNotificationsPlugin>();
+            IOSFlutterLocalNotificationsPlugin>();
 
     final iosPermissionGranted = await iosPlugin?.requestPermissions(
       alert: true,
