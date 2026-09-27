@@ -3271,6 +3271,213 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 22),
+
+                // Carte du QG
+                Builder(
+                  builder: (context) {
+                    String qgLevel;
+                    String qgNextText;
+                    double qgProgress;
+
+                    if (points >= 5000) {
+                      qgLevel = 'Maître Zin';
+                      qgNextText = 'Niveau maximum atteint';
+                      qgProgress = 1.0;
+                    } else if (points >= 3000) {
+                      qgLevel = 'Légende du QG';
+                      qgNextText = '${5000 - points} TP avant Maître Zin';
+                      qgProgress = (points - 3000) / 2000;
+                    } else if (points >= 1500) {
+                      qgLevel = 'Élite Twiix';
+                      qgNextText = '${3000 - points} TP avant Légende du QG';
+                      qgProgress = (points - 1500) / 1500;
+                    } else if (points >= 750) {
+                      qgLevel = 'Twiix Addict';
+                      qgNextText = '${1500 - points} TP avant Élite Twiix';
+                      qgProgress = (points - 750) / 750;
+                    } else if (points >= 250) {
+                      qgLevel = 'Membre du QG';
+                      qgNextText = '${750 - points} TP avant Twiix Addict';
+                      qgProgress = (points - 250) / 500;
+                    } else {
+                      qgLevel = 'Nouveau Zin';
+                      qgNextText = '${250 - points} TP avant Membre du QG';
+                      qgProgress = points / 250;
+                    }
+
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF21111A),
+                            Color(0xFF111117),
+                            Color(0xFF0B0B10),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: pink.withValues(alpha: 0.45),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: pink.withValues(alpha: 0.10),
+                            blurRadius: 24,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: pink.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: pink.withValues(alpha: 0.30),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.shield_rounded,
+                                      color: pink,
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'CARTE DU QG',
+                                      style: TextStyle(
+                                        color: pink,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '$points TP',
+                                style: const TextStyle(
+                                  color: pink,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Container(
+                                width: 72,
+                                height: 72,
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFF09090D),
+                                  border: Border.all(
+                                    color: pink.withValues(alpha: 0.55),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    'assets/images/twiix_profile_logo.png',
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      displayPseudo,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 23,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      qgLevel,
+                                      style: const TextStyle(
+                                        color: pink,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      'Membre du QG Les Twiix',
+                                      style: TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: LinearProgressIndicator(
+                              value: qgProgress.clamp(0.0, 1.0).toDouble(),
+                              minHeight: 8,
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.08),
+                              valueColor:
+                                  const AlwaysStoppedAnimation<Color>(pink),
+                            ),
+                          ),
+                          const SizedBox(height: 9),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.trending_up_rounded,
+                                size: 16,
+                                color: Colors.white54,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  qgNextText,
+                                  style: const TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 18),
+
                 Builder(
                   builder: (context) {
                     String levelName;
