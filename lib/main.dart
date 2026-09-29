@@ -3514,7 +3514,7 @@ class ProfilePage extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: Image.asset(
-                                      featuredBadge!['image'] as String,
+                                      featuredBadge['image'] as String,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -3535,7 +3535,7 @@ class ProfilePage extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
-                                          featuredBadge!['title'] as String,
+                                          featuredBadge['title'] as String,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
