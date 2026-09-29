@@ -2733,6 +2733,45 @@ class BadgesPage extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white60),
             ),
+            if (unlocked) ...[
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final user = FirebaseAuth.instance.currentUser;
+
+                    if (user == null || user.isAnonymous) {
+                      return;
+                    }
+
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .set(
+                      {
+                        'featuredBadgeId': badge['id'] as String,
+                      },
+                      SetOptions(merge: true),
+                    );
+
+                    if (!context.mounted) return;
+
+                    Navigator.pop(context);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${badge['title']} est maintenant ton badge favori.',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.push_pin_rounded),
+                  label: const Text('Afficher sur ma Carte du QG'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
