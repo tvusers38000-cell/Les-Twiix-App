@@ -3271,6 +3271,20 @@ class ProfilePage extends StatelessWidget {
                 : (user.displayName ?? 'Membre Twiix');
             final points = (data['twiixPoints'] as num?)?.toInt() ?? 0;
 
+            final featuredBadgeId =
+                (data['featuredBadgeId'] as String?)?.trim();
+
+            Map<String, Object>? featuredBadge;
+
+            if (featuredBadgeId != null && featuredBadgeId.isNotEmpty) {
+              for (final badge in BadgesPage.badges) {
+                if (badge['id'] == featuredBadgeId) {
+                  featuredBadge = badge;
+                  break;
+                }
+              }
+            }
+
             return PageFrame(
               title: 'Mon profil',
               children: [
@@ -3476,6 +3490,73 @@ class ProfilePage extends StatelessWidget {
                               ),
                             ],
                           ),
+
+                          if (featuredBadge != null) ...[
+                            const SizedBox(height: 18),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.04),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: pink.withValues(alpha: 0.22),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 58,
+                                    height: 58,
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF09090D),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Image.asset(
+                                      featuredBadge!['image'] as String,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 13),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'BADGE FAVORI',
+                                          style: TextStyle(
+                                            color: Colors.white54,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.0,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          featuredBadge!['title'] as String,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: pink,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.push_pin_rounded,
+                                    color: pink,
+                                    size: 20,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
                           const SizedBox(height: 20),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(20),
