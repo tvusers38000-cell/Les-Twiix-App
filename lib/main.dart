@@ -2909,6 +2909,196 @@ class BadgesPage extends StatelessWidget {
 
 class ProfilePage extends StatelessWidget {
   final TwiixState state;
+
+  Future<void> _showFeaturedBadgeSelector(
+    BuildContext context,
+    User user,
+    String? currentBadgeId,
+  ) async {
+    final badgesSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('badges')
+        .get();
+
+    if (!context.mounted) return;
+
+    final unlockedIds = badgesSnapshot.docs.map((doc) => doc.id).toSet();
+
+    final unlockedBadges = BadgesPage.badges
+        .where((badge) => unlockedIds.contains(badge['id'] as String))
+        .toList();
+
+    if (unlockedBadges.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Tu dois débloquer au moins un badge avant de pouvoir l’afficher.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF121218),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(26),
+        ),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Badge de ma Carte du QG',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Choisis parmi les badges que tu as débloqués.',
+                  style: TextStyle(
+                    color: Colors.white60,
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: unlockedBadges.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final badge = unlockedBadges[index];
+                      final badgeId = badge['id'] as String;
+                      final selected = badgeId == currentBadgeId;
+
+                      return Material(
+                        color: selected
+                            ? pink.withValues(alpha: 0.12)
+                            : Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () async {
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(user.uid)
+                                .set(
+                              {
+                                'featuredBadgeId': badgeId,
+                              },
+                              SetOptions(merge: true),
+                            );
+
+                            if (!sheetContext.mounted) return;
+                            Navigator.pop(sheetContext);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF09090D),
+                                    borderRadius:
+                                        BorderRadius.circular(14),
+                                  ),
+                                  child: Image.asset(
+                                    badge['image'] as String,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                const SizedBox(width: 13),
+                                Expanded(
+                                  child: Text(
+                                    badge['title'] as String,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color:
+                                          selected ? pink : Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                if (selected)
+                                  const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: pink,
+                                  )
+                                else
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Colors.white38,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                if (currentBadgeId != null &&
+                    currentBadgeId.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .set(
+                          {
+                            'featuredBadgeId': null,
+                          },
+                          SetOptions(merge: true),
+                        );
+
+                        if (!sheetContext.mounted) return;
+                        Navigator.pop(sheetContext);
+                      },
+                      icon: const Icon(Icons.hide_source_rounded),
+                      label: const Text(
+                        'Ne plus afficher de badge',
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
   const ProfilePage({super.key, required this.state});
 
   Future<void> logout() async {
@@ -3493,7 +3683,14 @@ class ProfilePage extends StatelessWidget {
 
                           if (featuredBadge != null) ...[
                             const SizedBox(height: 18),
-                            Container(
+                            InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () => _showFeaturedBadgeSelector(
+                                context,
+                                user,
+                                featuredBadgeId,
+                              ),
+                              child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
@@ -3555,6 +3752,29 @@ class ProfilePage extends StatelessWidget {
                                 ],
                               ),
                             ),
+                            ),
+                          ],
+
+
+                          if (featuredBadge == null) ...[
+                            const SizedBox(height: 18),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () =>
+                                    _showFeaturedBadgeSelector(
+                                  context,
+                                  user,
+                                  featuredBadgeId,
+                                ),
+                                icon: const Icon(
+                                  Icons.add_circle_outline_rounded,
+                                ),
+                                label: const Text(
+                                  'Choisir un badge à afficher',
+                                ),
+                              ),
+                            ),
                           ],
 
                           const SizedBox(height: 20),
@@ -3596,139 +3816,6 @@ class ProfilePage extends StatelessWidget {
                   },
                 ),
 
-                const SizedBox(height: 18),
-
-                Builder(
-                  builder: (context) {
-                    String levelName;
-                    int levelStart;
-                    int? nextLevelPoints;
-                    String? nextLevelName;
-
-                    if (points >= 5000) {
-                      levelName = 'Maître Zin';
-                      levelStart = 5000;
-                      nextLevelPoints = null;
-                      nextLevelName = null;
-                    } else if (points >= 3000) {
-                      levelName = 'Légende du QG';
-                      levelStart = 3000;
-                      nextLevelPoints = 5000;
-                      nextLevelName = 'Maître Zin';
-                    } else if (points >= 1500) {
-                      levelName = 'Élite Twiix';
-                      levelStart = 1500;
-                      nextLevelPoints = 3000;
-                      nextLevelName = 'Légende du QG';
-                    } else if (points >= 750) {
-                      levelName = 'Twiix Addict';
-                      levelStart = 750;
-                      nextLevelPoints = 1500;
-                      nextLevelName = 'Élite Twiix';
-                    } else if (points >= 250) {
-                      levelName = 'Membre du QG';
-                      levelStart = 250;
-                      nextLevelPoints = 750;
-                      nextLevelName = 'Twiix Addict';
-                    } else {
-                      levelName = 'Nouveau Zin';
-                      levelStart = 0;
-                      nextLevelPoints = 250;
-                      nextLevelName = 'Membre du QG';
-                    }
-
-                    final progress = nextLevelPoints == null
-                        ? 1.0
-                        : ((points - levelStart) /
-                                (nextLevelPoints - levelStart))
-                            .clamp(0.0, 1.0)
-                            .toDouble();
-
-                    final remaining = nextLevelPoints == null
-                        ? 0
-                        : nextLevelPoints - points;
-
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(18),
-                      decoration: cardDecoration(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.stars_rounded,
-                                color: pink,
-                                size: 34,
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Niveau Twiix',
-                                      style: TextStyle(
-                                        color: Colors.white60,
-                                      ),
-                                    ),
-                                    Text(
-                                      levelName,
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                '$points TP',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: pink,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 10,
-                              backgroundColor:
-                                  Colors.white.withValues(alpha: 0.10),
-                              valueColor:
-                                  const AlwaysStoppedAnimation<Color>(pink),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            nextLevelPoints == null
-                                ? 'Niveau maximum atteint'
-                                : '$points / $nextLevelPoints TP',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (nextLevelName != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              '$remaining TP avant $nextLevelName',
-                              style: const TextStyle(
-                                color: Colors.white60,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
                 const SizedBox(height: 18),
                 const SectionTitle('Mes badges'),
                 const SizedBox(height: 10),
