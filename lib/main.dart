@@ -1958,6 +1958,14 @@ class _PollCardState extends State<PollCard> {
       );
 
       final newVoteCount = transactionResult[0];
+
+      debugPrint(
+        'POLL DEBUG >>> uid=${user.uid} '
+        'poll=${widget.poll.id} '
+        'newVoteCount=$newVoteCount '
+        'anonymous=${user.isAnonymous}',
+      );
+
       final awardedPolls10Points =
           await claimPolls10Reward(newVoteCount);
 
@@ -2022,8 +2030,12 @@ class _PollCardState extends State<PollCard> {
               await unlockBadge('polls_100')) {
             unlockedProgressBadges.add('Légende des sondages');
           }
-        } catch (_) {
-          // Le vote reste valide même si un badge ne peut pas être créé.
+        } catch (e, st) {
+          debugPrint('BADGE ERROR >>> $e');
+          debugPrintStack(
+            label: 'BADGE STACK',
+            stackTrace: st,
+          );
         }
       }
 
