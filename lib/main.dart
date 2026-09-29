@@ -3464,6 +3464,10 @@ class ProfilePage extends StatelessWidget {
             final featuredBadgeId =
                 (data['featuredBadgeId'] as String?)?.trim();
 
+            debugPrint(
+              'QG DEBUG >>> uid=${user.uid} featuredBadgeId=$featuredBadgeId data=$data',
+            );
+
             Map<String, Object>? featuredBadge;
 
             if (featuredBadgeId != null && featuredBadgeId.isNotEmpty) {
