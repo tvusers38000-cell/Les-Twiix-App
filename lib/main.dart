@@ -2005,8 +2005,7 @@ class _PollCardState extends State<PollCard> {
           }
 
           await badgeRef.set({
-            'id': badgeId,
-            'sourcePollId': widget.poll.id,
+            'badgeId': badgeId,
             'unlockedAt': FieldValue.serverTimestamp(),
           });
 
