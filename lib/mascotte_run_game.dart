@@ -2688,6 +2688,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
       await _saveBestDistance();
 
+      await _syncMascotteRunCareerToCloud();
+
       final runRewardPoints =
           await _claimMascotteRunRewards(currentDistance);
 
@@ -2732,6 +2734,43 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
       finalScoreText?.text =
           'SCORE  $currentScore';
+    }
+  }
+
+  Future<void> _syncMascotteRunCareerToCloud() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null || user.isAnonymous) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final userRef =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+      await userRef.set({
+        'mascotteRunCareer': {
+          'games': prefs.getInt('mascotte_run_stats_games') ?? 0,
+          'totalDistance':
+              prefs.getInt('mascotte_run_stats_distance') ?? 0,
+          'bestDistance':
+              prefs.getInt('mascotte_run_best_distance') ?? 0,
+          'bestScore':
+              prefs.getInt('mascotte_run_stats_best_score') ?? 0,
+          'balls': prefs.getInt('mascotte_run_stats_balls') ?? 0,
+          'twiixModes':
+              prefs.getInt('mascotte_run_stats_twiix_modes') ?? 0,
+          'skinGames': {
+            'gnomi': prefs.getInt('mascotte_run_stats_skin_gnomi') ?? 0,
+            'wendy': prefs.getInt('mascotte_run_stats_skin_wendy') ?? 0,
+            'swan': prefs.getInt('mascotte_run_stats_skin_swan') ?? 0,
+            'dean': prefs.getInt('mascotte_run_stats_skin_dean') ?? 0,
+          },
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Mascotte Run: sauvegarde carrière cloud impossible: $e');
     }
   }
 
