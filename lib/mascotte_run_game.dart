@@ -2818,33 +2818,83 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      final firestore = FirebaseFirestore.instance;
+      final userRef = firestore.collection('users').doc(user.uid);
 
-      final userRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final local = <String, int>{
+        'games': prefs.getInt('mascotte_run_stats_games') ?? 0,
+        'totalDistance': prefs.getInt('mascotte_run_stats_distance') ?? 0,
+        'bestDistance': prefs.getInt('mascotte_run_best_distance') ?? 0,
+        'bestScore': prefs.getInt('mascotte_run_stats_best_score') ?? 0,
+        'balls': prefs.getInt('mascotte_run_stats_balls') ?? 0,
+        'twiixModes': prefs.getInt('mascotte_run_stats_twiix_modes') ?? 0,
+      };
 
-      await userRef.set({
-        'mascotteRunCareer': {
-          'games': prefs.getInt('mascotte_run_stats_games') ?? 0,
-          'totalDistance':
-              prefs.getInt('mascotte_run_stats_distance') ?? 0,
-          'bestDistance':
-              prefs.getInt('mascotte_run_best_distance') ?? 0,
-          'bestScore':
-              prefs.getInt('mascotte_run_stats_best_score') ?? 0,
-          'balls': prefs.getInt('mascotte_run_stats_balls') ?? 0,
-          'twiixModes':
-              prefs.getInt('mascotte_run_stats_twiix_modes') ?? 0,
-          'skinGames': {
-            'gnomi': prefs.getInt('mascotte_run_stats_skin_gnomi') ?? 0,
-            'wendy': prefs.getInt('mascotte_run_stats_skin_wendy') ?? 0,
-            'swan': prefs.getInt('mascotte_run_stats_skin_swan') ?? 0,
-            'dean': prefs.getInt('mascotte_run_stats_skin_dean') ?? 0,
+      final localSkins = <String, int>{
+        'gnomi': prefs.getInt('mascotte_run_stats_skin_gnomi') ?? 0,
+        'wendy': prefs.getInt('mascotte_run_stats_skin_wendy') ?? 0,
+        'swan': prefs.getInt('mascotte_run_stats_skin_swan') ?? 0,
+        'dean': prefs.getInt('mascotte_run_stats_skin_dean') ?? 0,
+      };
+
+      await firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(userRef);
+        final data = snapshot.data();
+        final cloudCareer = data?['mascotteRunCareer'];
+
+        int cloudValue(String key) {
+          if (cloudCareer is Map) {
+            final value = cloudCareer[key];
+            if (value is num) return value.toInt();
+          }
+          return 0;
+        }
+
+        int cloudSkinValue(String skin) {
+          if (cloudCareer is Map) {
+            final skins = cloudCareer['skinGames'];
+            if (skins is Map) {
+              final value = skins[skin];
+              if (value is num) return value.toInt();
+            }
+          }
+          return 0;
+        }
+
+        int maxInt(int a, int b) => a > b ? a : b;
+
+        final merged = <String, int>{};
+
+        for (final entry in local.entries) {
+          merged[entry.key] =
+              maxInt(entry.value, cloudValue(entry.key));
+        }
+
+        final mergedSkins = <String, int>{};
+
+        for (final entry in localSkins.entries) {
+          mergedSkins[entry.key] =
+              maxInt(entry.value, cloudSkinValue(entry.key));
+        }
+
+        transaction.set(
+          userRef,
+          {
+            'mascotteRunCareer': {
+              ...merged,
+              'skinGames': mergedSkins,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
           },
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-      }, SetOptions(merge: true));
+          SetOptions(merge: true),
+        );
+      });
+
+      debugPrint('Mascotte Run: carrière synchronisée avec le cloud');
     } catch (e) {
-      debugPrint('Mascotte Run: sauvegarde carrière cloud impossible: $e');
+      debugPrint(
+        'Mascotte Run: sauvegarde carrière cloud impossible: $e',
+      );
     }
   }
 
