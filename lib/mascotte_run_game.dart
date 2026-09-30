@@ -934,6 +934,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    await _restoreMascotteRunCareerFromCloud();
 
     backdrop = RoadTripBackdrop(
       gameSize: Vector2(size.x, size.y),
@@ -2734,6 +2735,79 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
       finalScoreText?.text =
           'SCORE  $currentScore';
+    }
+  }
+
+  Future<void> _restoreMascotteRunCareerFromCloud() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null || user.isAnonymous) return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final data = snapshot.data();
+      final career = data?['mascotteRunCareer'];
+
+      if (career is! Map) return;
+
+      final prefs = await SharedPreferences.getInstance();
+
+      Future<void> restoreMax(String key, dynamic cloudValue) async {
+        if (cloudValue is! num) return;
+
+        final cloud = cloudValue.toInt();
+        final local = prefs.getInt(key) ?? 0;
+
+        if (cloud > local) {
+          await prefs.setInt(key, cloud);
+        }
+      }
+
+      await restoreMax(
+        'mascotte_run_stats_games',
+        career['games'],
+      );
+      await restoreMax(
+        'mascotte_run_stats_distance',
+        career['totalDistance'],
+      );
+      await restoreMax(
+        'mascotte_run_best_distance',
+        career['bestDistance'],
+      );
+      await restoreMax(
+        'mascotte_run_stats_best_score',
+        career['bestScore'],
+      );
+      await restoreMax(
+        'mascotte_run_stats_balls',
+        career['balls'],
+      );
+      await restoreMax(
+        'mascotte_run_stats_twiix_modes',
+        career['twiixModes'],
+      );
+
+      final skinGames = career['skinGames'];
+
+      if (skinGames is Map) {
+        for (final skin in ['gnomi', 'wendy', 'swan', 'dean']) {
+          await restoreMax(
+            'mascotte_run_stats_skin_$skin',
+            skinGames[skin],
+          );
+        }
+      }
+
+      debugPrint('Mascotte Run: carrière restaurée depuis le cloud');
+    } catch (e) {
+      debugPrint(
+        'Mascotte Run: restauration carrière cloud impossible: $e',
+      );
     }
   }
 
