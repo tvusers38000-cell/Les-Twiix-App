@@ -2049,49 +2049,6 @@ class _PollCardState extends State<PollCard> {
         }
       }
 
-      // Diagnostic temporaire visible directement dans l'application.
-      if (!user.isAnonymous && mounted) {
-        try {
-          final diagnosticProgress = await progressRef.get();
-
-          final diagnosticCount =
-              (diagnosticProgress.data()?['count'] as num?)?.toInt() ?? 0;
-
-          final diagnosticBadges = await firestore
-              .collection('users')
-              .doc(user.uid)
-              .collection('badges')
-              .get();
-
-          final diagnosticBadgeIds =
-              diagnosticBadges.docs.map((doc) => doc.id).toSet();
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                duration: const Duration(seconds: 15),
-                content: Text(
-                  'DIAG | votes=$diagnosticCount'
-                  ' | first=${diagnosticBadgeIds.contains('first_vote') ? 'OUI' : 'NON'}'
-                  ' | 10=${diagnosticBadgeIds.contains('polls_10') ? 'OUI' : 'NON'}'
-                  ' | 50=${diagnosticBadgeIds.contains('polls_50') ? 'OUI' : 'NON'}'
-                  ' | 100=${diagnosticBadgeIds.contains('polls_100') ? 'OUI' : 'NON'}',
-                ),
-              ),
-            );
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                duration: const Duration(seconds: 12),
-                content: Text('DIAG ERROR : $e'),
-              ),
-            );
-          }
-        }
-      }
-
       if (!mounted) return;
 
       if (unlockedFirstVote) {
