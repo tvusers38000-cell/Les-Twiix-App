@@ -2803,6 +2803,29 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         }
       }
 
+      // Restaure les badges, légendaires et milestones.
+      final unlocks = career['unlocks'];
+
+      if (unlocks is Map) {
+        for (final key in [
+          'mascotte_run_badge_twiix_gauche',
+          'mascotte_run_badge_twiix_droit',
+          'mascotte_run_badge_3_2_zin',
+          'mascotte_run_legend_queen_wendy',
+          'mascotte_run_legend_swan_fusee',
+          'mascotte_run_legend_dean_sage',
+          'mascotte_run_milestone_500',
+          'mascotte_run_milestone_1000',
+          'mascotte_run_milestone_2000',
+          'mascotte_run_milestone_3500',
+          'mascotte_run_milestone_5000',
+        ]) {
+          if (unlocks[key] == true) {
+            await prefs.setBool(key, true);
+          }
+        }
+      }
+
       debugPrint('Mascotte Run: carrière restaurée depuis le cloud');
     } catch (e) {
       debugPrint(
@@ -2837,6 +2860,24 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         'dean': prefs.getInt('mascotte_run_stats_skin_dean') ?? 0,
       };
 
+      const unlockKeys = <String>[
+        'mascotte_run_badge_twiix_gauche',
+        'mascotte_run_badge_twiix_droit',
+        'mascotte_run_badge_3_2_zin',
+        'mascotte_run_legend_queen_wendy',
+        'mascotte_run_legend_swan_fusee',
+        'mascotte_run_legend_dean_sage',
+        'mascotte_run_milestone_500',
+        'mascotte_run_milestone_1000',
+        'mascotte_run_milestone_2000',
+        'mascotte_run_milestone_3500',
+        'mascotte_run_milestone_5000',
+      ];
+
+      final localUnlocks = <String, bool>{
+        for (final key in unlockKeys) key: prefs.getBool(key) == true,
+      };
+
       await firestore.runTransaction((transaction) async {
         final snapshot = await transaction.get(userRef);
         final data = snapshot.data();
@@ -2861,6 +2902,16 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
           return 0;
         }
 
+        bool cloudUnlockValue(String key) {
+          if (cloudCareer is Map) {
+            final unlocks = cloudCareer['unlocks'];
+            if (unlocks is Map) {
+              return unlocks[key] == true;
+            }
+          }
+          return false;
+        }
+
         int maxInt(int a, int b) => a > b ? a : b;
 
         final merged = <String, int>{};
@@ -2877,12 +2928,20 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
               maxInt(entry.value, cloudSkinValue(entry.key));
         }
 
+        final mergedUnlocks = <String, bool>{};
+
+        for (final entry in localUnlocks.entries) {
+          mergedUnlocks[entry.key] =
+              entry.value || cloudUnlockValue(entry.key);
+        }
+
         transaction.set(
           userRef,
           {
             'mascotteRunCareer': {
               ...merged,
               'skinGames': mergedSkins,
+              'unlocks': mergedUnlocks,
               'updatedAt': FieldValue.serverTimestamp(),
             },
           },
