@@ -6363,6 +6363,9 @@ class _MascotteRunWardrobePageState
   static const String _equippedSkinKey =
       'mascotte_run_equipped_skin';
 
+  static const String _equippedSkinUpdatedAtKey =
+      'mascotte_run_equipped_skin_updated_at';
+
   int _bestDistance = 0;
   String _equippedSkin = 'gnomi';
 
@@ -6413,8 +6416,62 @@ class _MascotteRunWardrobePageState
     final best =
         prefs.getInt('mascotte_run_best_distance') ?? 0;
 
-    final equipped =
+    var equipped =
         prefs.getString(_equippedSkinKey) ?? 'gnomi';
+
+    var localUpdatedAt =
+        prefs.getInt(_equippedSkinUpdatedAtKey) ?? 0;
+
+    const validSkins = {'gnomi', 'wendy', 'swan', 'dean'};
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null && !user.isAnonymous) {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        final data = snapshot.data();
+        final cloudSelection = data?['mascotteRunEquippedSkin'];
+
+        if (cloudSelection is Map) {
+          final cloudSkin = cloudSelection['skinId'];
+          final cloudUpdatedAt = cloudSelection['updatedAt'];
+
+          final cloudMillis = cloudUpdatedAt is Timestamp
+              ? cloudUpdatedAt.millisecondsSinceEpoch
+              : 0;
+
+          if (cloudSkin is String &&
+              validSkins.contains(cloudSkin) &&
+              cloudMillis > localUpdatedAt) {
+            equipped = cloudSkin;
+            localUpdatedAt = cloudMillis;
+
+            await prefs.setString(
+              _equippedSkinKey,
+              cloudSkin,
+            );
+
+            await prefs.setInt(
+              _equippedSkinUpdatedAtKey,
+              cloudMillis,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint(
+        'Mascotte Run: restauration skin équipé impossible: $e',
+      );
+    }
+
+    if (!validSkins.contains(equipped)) {
+      equipped = 'gnomi';
+      await prefs.setString(_equippedSkinKey, equipped);
+    }
 
     if (!mounted) return;
 
@@ -6438,6 +6495,36 @@ class _MascotteRunWardrobePageState
       _equippedSkinKey,
       skinId,
     );
+
+    final equippedAt = DateTime.now().millisecondsSinceEpoch;
+
+    await prefs.setInt(
+      _equippedSkinUpdatedAtKey,
+      equippedAt,
+    );
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null && !user.isAnonymous) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set(
+          {
+            'mascotteRunEquippedSkin': {
+              'skinId': skinId,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+          },
+          SetOptions(merge: true),
+        );
+      }
+    } catch (e) {
+      debugPrint(
+        'Mascotte Run: sauvegarde skin équipé impossible: $e',
+      );
+    }
 
     if (!mounted) return;
 
