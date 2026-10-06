@@ -1567,10 +1567,60 @@ class SocialNetworksPage extends StatelessWidget {
 
 class ChallengesPage extends StatelessWidget {
   final TwiixState state;
-  const ChallengesPage({super.key, required this.state});
-  @override Widget build(BuildContext context) => PageFrame(title: 'Défis & Twiix Points', children: [
-    ...state.challenges.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12), child: ChallengeCard(title: c.title, subtitle: c.subtitle, points: c.points))),
-  ]);
+
+  const ChallengesPage({
+    super.key,
+    required this.state,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null || user.isAnonymous) {
+      return PageFrame(
+        title: 'Défis & Twiix Points',
+        children: state.challenges
+            .map((c) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ChallengeCard(
+                    title: c.title,
+                    subtitle: c.subtitle,
+                    points: c.points,
+                  ),
+                ))
+            .toList(),
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('challengeRewards')
+          .snapshots(),
+      builder: (context, snapshot) {
+        final completedIds =
+            snapshot.data?.docs.map((doc) => doc.id).toSet() ??
+                <String>{};
+
+        return PageFrame(
+          title: 'Défis & Twiix Points',
+          children: state.challenges
+              .map((c) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: ChallengeCard(
+                      title: c.title,
+                      subtitle: c.subtitle,
+                      points: c.points,
+                      completed: completedIds.contains(c.id),
+                    ),
+                  ))
+              .toList(),
+        );
+      },
+    );
+  }
 }
 
 class DonorsPage extends StatelessWidget {
@@ -5048,10 +5098,71 @@ class FeedCard extends StatelessWidget {
   }
 }
 class ChallengeCard extends StatelessWidget {
-  final String title; final String subtitle; final int points;
-  const ChallengeCard({super.key, required this.title, required this.subtitle, required this.points});
-  @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(16), decoration: cardDecoration(), child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)), const SizedBox(height: 6), Text(subtitle, style: const TextStyle(color: Colors.white60))])), Text('+$points pts', style: const TextStyle(color: Color(0xFFFFD34E), fontWeight: FontWeight.w900))]));
+  final String title;
+  final String subtitle;
+  final int points;
+  final bool completed;
+
+  const ChallengeCard({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.points,
+    this.completed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: cardDecoration(),
+        child: Row(
+          children: [
+            if (completed) ...[
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFFFFD34E),
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    completed ? 'Défi accompli' : subtitle,
+                    style: TextStyle(
+                      color: completed
+                          ? const Color(0xFFFFD34E)
+                          : Colors.white60,
+                      fontWeight:
+                          completed ? FontWeight.w800 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              completed ? '✓ +$points pts' : '+$points pts',
+              style: const TextStyle(
+                color: Color(0xFFFFD34E),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      );
 }
+
 class DonorTile extends StatelessWidget {
   final int rank;
   final Donor donor;
