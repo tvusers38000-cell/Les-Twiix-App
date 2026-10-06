@@ -1604,7 +1604,20 @@ class ChallengesPage extends StatelessWidget {
             snapshot.data?.docs.map((doc) => doc.id).toSet() ??
                 <String>{};
 
-        return PageFrame(
+        return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          future: FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('progress')
+              .doc('polls')
+              .get(),
+          builder: (context, progressSnapshot) {
+            final pollCount =
+                (progressSnapshot.data?.data()?['count'] as num?)
+                        ?.toInt() ??
+                    0;
+
+            return PageFrame(
           title: 'Défis & Twiix Points',
           children: state.challenges
               .map((c) => Padding(
@@ -1614,9 +1627,19 @@ class ChallengesPage extends StatelessWidget {
                       subtitle: c.subtitle,
                       points: c.points,
                       completed: completedIds.contains(c.id),
+                      progress:
+                          c.type == 'polls_10' ? pollCount : null,
+                      target:
+                          c.type == 'polls_10' ? 10 : null,
+                      progressLabel:
+                          c.type == 'polls_10'
+                              ? '${pollCount.clamp(0, 10)} / 10 votes'
+                              : null,
                     ),
                   ))
               .toList(),
+            );
+          },
         );
       },
     );
@@ -5102,6 +5125,9 @@ class ChallengeCard extends StatelessWidget {
   final String subtitle;
   final int points;
   final bool completed;
+  final int? progress;
+  final int? target;
+  final String? progressLabel;
 
   const ChallengeCard({
     super.key,
@@ -5109,6 +5135,9 @@ class ChallengeCard extends StatelessWidget {
     required this.subtitle,
     required this.points,
     this.completed = false,
+    this.progress,
+    this.target,
+    this.progressLabel,
   });
 
   @override
@@ -5147,6 +5176,30 @@ class ChallengeCard extends StatelessWidget {
                           completed ? FontWeight.w800 : FontWeight.normal,
                     ),
                   ),
+                  if (!completed &&
+                      progress != null &&
+                      target != null &&
+                      target! > 0) ...[
+                    const SizedBox(height: 10),
+                    LinearProgressIndicator(
+                      value: (progress! / target!).clamp(0.0, 1.0),
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(10),
+                      backgroundColor: Colors.white12,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFFFD34E),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      progressLabel ?? '$progress / $target',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
