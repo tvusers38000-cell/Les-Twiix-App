@@ -10,6 +10,7 @@ import 'live_reminder_reward.dart';
 import 'live_presence_reward.dart';
 import 'loyal_qg_reward.dart';
 import 'polls_10_reward.dart';
+import 'challenge_badge_service.dart';
 import 'package:flame/game.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -92,6 +93,12 @@ Future<void> main() async {
   final state = await TwiixState.load();
   await recordQGVisit();
   if (state.isLive) { await claimLivePresenceReward(); }
+
+  // Synchronise les badges liés aux défis déjà accomplis.
+  // Le comptage repose sur challengeRewards : un même défi
+  // ne peut donc pas être compté plusieurs fois.
+  await syncChallengeBadges();
+
   runApp(TwiixApp(state: state));
 }
 
