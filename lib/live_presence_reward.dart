@@ -61,6 +61,10 @@ Future<int> claimLivePresenceReward() async {
         .collection('challengeRewards')
         .doc(challengeId);
 
+    final firstEventBadgeRef = userRef
+        .collection('badges')
+        .doc('first_event');
+
     return await firestore.runTransaction<int>(
       (transaction) async {
         final rewardSnapshot =
@@ -68,6 +72,9 @@ Future<int> claimLivePresenceReward() async {
 
         final userSnapshot =
             await transaction.get(userRef);
+
+        final firstEventBadgeSnapshot =
+            await transaction.get(firstEventBadgeRef);
 
         if (rewardSnapshot.exists ||
             !userSnapshot.exists) {
@@ -92,6 +99,13 @@ Future<int> claimLivePresenceReward() async {
           'twiixPoints': currentPoints + points,
           'lastChallengeRewardId': challengeId,
         });
+
+        if (!firstEventBadgeSnapshot.exists) {
+          transaction.set(firstEventBadgeRef, {
+            'badgeId': 'first_event',
+            'unlockedAt': FieldValue.serverTimestamp(),
+          });
+        }
 
         return points;
       },
