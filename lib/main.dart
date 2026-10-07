@@ -1626,6 +1626,23 @@ class ChallengesPage extends StatelessWidget {
                 final userData = userSnapshot.data?.data();
                 final career = userData?['mascotteRunCareer'];
 
+                final playedSkins = <String>{};
+                final skinsRaw = userData?['mascotteRunSkinsPlayed'];
+
+                if (skinsRaw is List) {
+                  for (final skin in skinsRaw) {
+                    if (skin is String) {
+                      playedSkins.add(skin);
+                    }
+                  }
+                }
+
+                final packProgress = [
+                  'wendy',
+                  'swan',
+                  'dean',
+                ].where(playedSkins.contains).length;
+
                 var bestDistance = 0;
                 var bestBalls = 0;
 
@@ -1657,21 +1674,27 @@ class ChallengesPage extends StatelessWidget {
                               ? bestDistance
                               : c.id == 'mascotte_run_15_balls'
                                   ? bestBalls
-                                  : null,
+                                  : c.id == 'mascotte_run_pack'
+                                      ? packProgress
+                                      : null,
                       target: c.type == 'polls_10'
                           ? 10
                           : c.id == 'mascotte_run_1000'
                               ? 1000
                               : c.id == 'mascotte_run_15_balls'
                                   ? 15
-                                  : null,
+                                  : c.id == 'mascotte_run_pack'
+                                      ? 3
+                                      : null,
                       progressLabel: c.type == 'polls_10'
                           ? '${pollCount.clamp(0, 10)} / 10 votes'
                           : c.id == 'mascotte_run_1000'
                               ? '${bestDistance.clamp(0, 1000)} / 1000 m'
                               : c.id == 'mascotte_run_15_balls'
                                   ? '${bestBalls.clamp(0, 15)} / 15 ballons'
-                                  : null,
+                                  : c.id == 'mascotte_run_pack'
+                                      ? '$packProgress / 3 personnages'
+                                      : null,
                     ),
                   ))
               .toList(),
