@@ -1,3 +1,5 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -31,7 +33,93 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _notifications.initialize(initializationSettings);
+    await _notifications.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (response) async {
+        await _openNotificationUrl(response.payload);
+      },
+    );
+
+    await _initializeFirebaseMessaging();
+  }
+
+  static Future<void> _initializeFirebaseMessaging() async {
+    final messaging = FirebaseMessaging.instance;
+
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus ==
+            AuthorizationStatus.authorized ||
+        settings.authorizationStatus ==
+            AuthorizationStatus.provisional) {
+      await messaging.subscribeToTopic('twiix_live');
+    }
+
+    FirebaseMessaging.onMessageOpenedApp.listen((message) async {
+      await _openNotificationUrl(message.data['url']);
+    });
+
+    final initialMessage = await messaging.getInitialMessage();
+
+    if (initialMessage != null) {
+      await _openNotificationUrl(initialMessage.data['url']);
+    }
+
+    FirebaseMessaging.onMessage.listen((message) async {
+      final notification = message.notification;
+
+      if (notification == null) {
+        return;
+      }
+
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          'twiix_live_now',
+          'Lives Les Twiix',
+          channelDescription:
+              'Notifications lorsque Les Twiix sont en live',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      );
+
+      await _notifications.show(
+        message.hashCode,
+        notification.title ?? 'Les Twiix sont en LIVE !',
+        notification.body ?? 'Rejoins le live maintenant.',
+        details,
+        payload: message.data['url'] as String?,
+      );
+    });
+  }
+
+  static Future<void> _openNotificationUrl(
+    String? url,
+  ) async {
+    if (url == null || url.trim().isEmpty) {
+      return;
+    }
+
+    final uri = Uri.tryParse(url.trim());
+
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http')) {
+      return;
+    }
+
+    await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   static Future<void> scheduleLiveReminder({
