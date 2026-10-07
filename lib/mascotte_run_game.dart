@@ -2646,6 +2646,8 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
           prefs.getInt('mascotte_run_stats_distance') ?? 0;
       final careerBalls =
           prefs.getInt('mascotte_run_stats_balls') ?? 0;
+      final previousBestBalls =
+          prefs.getInt('mascotte_run_stats_best_balls') ?? 0;
       final previousBestScore =
           prefs.getInt('mascotte_run_stats_best_score') ?? 0;
       final careerModes =
@@ -2663,6 +2665,13 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         'mascotte_run_stats_balls',
         careerBalls + currentBalls,
       );
+
+      if (currentBalls > previousBestBalls) {
+        await prefs.setInt(
+          'mascotte_run_stats_best_balls',
+          currentBalls,
+        );
+      }
 
       if (currentScore > previousBestScore) {
         await prefs.setInt(
@@ -2788,6 +2797,10 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         career['balls'],
       );
       await restoreMax(
+        'mascotte_run_stats_best_balls',
+        career['bestBalls'],
+      );
+      await restoreMax(
         'mascotte_run_stats_twiix_modes',
         career['twiixModes'],
       );
@@ -2850,6 +2863,7 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
         'bestDistance': prefs.getInt('mascotte_run_best_distance') ?? 0,
         'bestScore': prefs.getInt('mascotte_run_stats_best_score') ?? 0,
         'balls': prefs.getInt('mascotte_run_stats_balls') ?? 0,
+        'bestBalls': prefs.getInt('mascotte_run_stats_best_balls') ?? 0,
         'twiixModes': prefs.getInt('mascotte_run_stats_twiix_modes') ?? 0,
       };
 

@@ -1627,11 +1627,17 @@ class ChallengesPage extends StatelessWidget {
                 final career = userData?['mascotteRunCareer'];
 
                 var bestDistance = 0;
+                var bestBalls = 0;
 
                 if (career is Map) {
-                  final value = career['bestDistance'];
-                  if (value is num) {
-                    bestDistance = value.toInt();
+                  final distanceValue = career['bestDistance'];
+                  if (distanceValue is num) {
+                    bestDistance = distanceValue.toInt();
+                  }
+
+                  final ballsValue = career['bestBalls'];
+                  if (ballsValue is num) {
+                    bestBalls = ballsValue.toInt();
                   }
                 }
 
@@ -1649,17 +1655,23 @@ class ChallengesPage extends StatelessWidget {
                           ? pollCount
                           : c.id == 'mascotte_run_1000'
                               ? bestDistance
-                              : null,
+                              : c.id == 'mascotte_run_15_balls'
+                                  ? bestBalls
+                                  : null,
                       target: c.type == 'polls_10'
                           ? 10
                           : c.id == 'mascotte_run_1000'
                               ? 1000
-                              : null,
+                              : c.id == 'mascotte_run_15_balls'
+                                  ? 15
+                                  : null,
                       progressLabel: c.type == 'polls_10'
                           ? '${pollCount.clamp(0, 10)} / 10 votes'
                           : c.id == 'mascotte_run_1000'
                               ? '${bestDistance.clamp(0, 1000)} / 1000 m'
-                              : null,
+                              : c.id == 'mascotte_run_15_balls'
+                                  ? '${bestBalls.clamp(0, 15)} / 15 ballons'
+                                  : null,
                     ),
                   ))
               .toList(),
