@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -149,7 +150,6 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await NotificationService.initialize();
   if (FirebaseAuth.instance.currentUser == null) {
     await FirebaseAuth.instance.signInAnonymously();
   }
@@ -164,6 +164,12 @@ Future<void> main() async {
   await syncAutomaticSecretBadges();
 
   runApp(TwiixApp(state: state));
+
+  unawaited(
+    NotificationService.initialize().catchError(
+      (Object _, StackTrace __) {},
+    ),
+  );
 }
 
 class TwiixApp extends StatelessWidget {
