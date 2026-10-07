@@ -1676,7 +1676,9 @@ class ChallengesPage extends StatelessWidget {
                                   ? bestBalls
                                   : c.id == 'mascotte_run_pack'
                                       ? packProgress
-                                      : null,
+                                      : c.id == 'mascotte_run_5000'
+                                          ? bestDistance
+                                          : null,
                       target: c.type == 'polls_10'
                           ? 10
                           : c.id == 'mascotte_run_1000'
@@ -1685,7 +1687,9 @@ class ChallengesPage extends StatelessWidget {
                                   ? 15
                                   : c.id == 'mascotte_run_pack'
                                       ? 3
-                                      : null,
+                                      : c.id == 'mascotte_run_5000'
+                                          ? 5000
+                                          : null,
                       progressLabel: c.type == 'polls_10'
                           ? '${pollCount.clamp(0, 10)} / 10 votes'
                           : c.id == 'mascotte_run_1000'
@@ -1694,7 +1698,9 @@ class ChallengesPage extends StatelessWidget {
                                   ? '${bestBalls.clamp(0, 15)} / 15 ballons'
                                   : c.id == 'mascotte_run_pack'
                                       ? '$packProgress / 3 personnages'
-                                      : null,
+                                      : c.id == 'mascotte_run_5000'
+                                          ? '${bestDistance.clamp(0, 5000)} / 5000 m'
+                                          : null,
                     ),
                   ))
               .toList(),
