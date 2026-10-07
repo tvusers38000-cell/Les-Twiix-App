@@ -1617,7 +1617,25 @@ class ChallengesPage extends StatelessWidget {
                         ?.toInt() ??
                     0;
 
-            return PageFrame(
+            return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .snapshots(),
+              builder: (context, userSnapshot) {
+                final userData = userSnapshot.data?.data();
+                final career = userData?['mascotteRunCareer'];
+
+                var bestDistance = 0;
+
+                if (career is Map) {
+                  final value = career['bestDistance'];
+                  if (value is num) {
+                    bestDistance = value.toInt();
+                  }
+                }
+
+                return PageFrame(
           title: 'Défis & Twiix Points',
           children: state.challenges
               .map((c) => Padding(
@@ -1627,17 +1645,26 @@ class ChallengesPage extends StatelessWidget {
                       subtitle: c.subtitle,
                       points: c.points,
                       completed: completedIds.contains(c.id),
-                      progress:
-                          c.type == 'polls_10' ? pollCount : null,
-                      target:
-                          c.type == 'polls_10' ? 10 : null,
-                      progressLabel:
-                          c.type == 'polls_10'
-                              ? '${pollCount.clamp(0, 10)} / 10 votes'
+                      progress: c.type == 'polls_10'
+                          ? pollCount
+                          : c.id == 'mascotte_run_1000'
+                              ? bestDistance
+                              : null,
+                      target: c.type == 'polls_10'
+                          ? 10
+                          : c.id == 'mascotte_run_1000'
+                              ? 1000
+                              : null,
+                      progressLabel: c.type == 'polls_10'
+                          ? '${pollCount.clamp(0, 10)} / 10 votes'
+                          : c.id == 'mascotte_run_1000'
+                              ? '${bestDistance.clamp(0, 1000)} / 1000 m'
                               : null,
                     ),
                   ))
               .toList(),
+                );
+              },
             );
           },
         );
