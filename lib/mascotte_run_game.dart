@@ -3055,6 +3055,17 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
             };
           }
 
+          DocumentSnapshot<Map<String, dynamic>>?
+              zinBadgeSnapshot;
+
+          if (modeTwiixTriggered) {
+            final zinBadgeRef =
+                userRef.collection('badges').doc('secret_zin');
+
+            zinBadgeSnapshot =
+                await transaction.get(zinBadgeRef);
+          }
+
           final rewardSnapshots =
               <String, DocumentSnapshot<Map<String, dynamic>>>{};
 
@@ -3065,6 +3076,17 @@ class MascotteRunGame extends FlameGame with TapCallbacks {
 
             rewardSnapshots[entry.key] =
                 await transaction.get(rewardRef);
+          }
+
+          if (modeTwiixTriggered &&
+              zinBadgeSnapshot?.exists != true) {
+            final zinBadgeRef =
+                userRef.collection('badges').doc('secret_zin');
+
+            transaction.set(zinBadgeRef, {
+              'badgeId': 'secret_zin',
+              'unlockedAt': FieldValue.serverTimestamp(),
+            });
           }
 
           var totalAwarded = 0;

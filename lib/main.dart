@@ -83,6 +83,67 @@ Future<void> activateLiveReminder(
 const pink = Color(0xFFFF2C7D);
 const blue = Color(0xFF3C7CFF);
 
+Future<void> syncAutomaticSecretBadges() async {
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user == null || user.isAnonymous) {
+    return;
+  }
+
+  try {
+    final firestore = FirebaseFirestore.instance;
+    final userRef =
+        firestore.collection('users').doc(user.uid);
+
+    final userSnapshot = await userRef.get();
+
+    if (!userSnapshot.exists) {
+      return;
+    }
+
+    final data = userSnapshot.data();
+    final createdAtRaw = data?['createdAt'];
+
+    if (createdAtRaw is Timestamp) {
+      final createdAt = createdAtRaw.toDate();
+      final launchCutoff = DateTime(2027, 1, 1);
+
+      if (createdAt.isBefore(launchCutoff)) {
+        final badgeRef =
+            userRef.collection('badges').doc('secret_beginning');
+
+        final badgeSnapshot = await badgeRef.get();
+
+        if (!badgeSnapshot.exists) {
+          await badgeRef.set({
+            'badgeId': 'secret_beginning',
+            'unlockedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    }
+
+    final hour = DateTime.now().hour;
+
+    if (hour >= 0 && hour < 5) {
+      final badgeRef =
+          userRef.collection('badges').doc('secret_night');
+
+      final badgeSnapshot = await badgeRef.get();
+
+      if (!badgeSnapshot.exists) {
+        await badgeRef.set({
+          'badgeId': 'secret_night',
+          'unlockedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+  } catch (_) {
+    // Un problème de badge ne doit jamais bloquer
+    // le démarrage de l'application.
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initialize();
@@ -98,6 +159,7 @@ Future<void> main() async {
   // Le comptage repose sur challengeRewards : un même défi
   // ne peut donc pas être compté plusieurs fois.
   await syncChallengeBadges();
+  await syncAutomaticSecretBadges();
 
   runApp(TwiixApp(state: state));
 }
@@ -4603,6 +4665,11 @@ class AdminPage extends StatelessWidget {
         title: 'Gérer les donateurs',
         onTap: () => _manageDonorsDialog(context, state),
       ),
+      AdminAction(
+        icon: Icons.auto_awesome_rounded,
+        title: 'Attribuer Élu des Twiix',
+        onTap: () => _chosenBadgeDialog(context),
+      ),
       AdminAction(icon: Icons.auto_awesome, title: 'Bibliothèque de défis', onTap: () => _challengeLibraryDialog(context, state)),
       AdminAction(icon: Icons.emoji_events, title: 'Créer un défi', onTap: () => _challengeDialog(context, state)),
       AdminAction(icon: Icons.poll_outlined, title: 'Créer un sondage', onTap: () => _pollDialog(context, state)),
@@ -4612,6 +4679,190 @@ class AdminPage extends StatelessWidget {
   );
 }
 
+
+Future<void> _chosenBadgeDialog(
+  BuildContext context,
+) async {
+  try {
+    final admin = FirebaseAuth.instance.currentUser;
+
+    if (admin == null || admin.isAnonymous) {
+      return;
+    }
+
+    final firestore = FirebaseFirestore.instance;
+
+    final adminSnapshot =
+        await firestore.collection('admins').doc(admin.uid).get();
+
+    final adminData = adminSnapshot.data();
+    final role = adminData?['role'];
+
+    if (adminData?['active'] != true ||
+        (role != 'owner' && role != 'twiix')) {
+      return;
+    }
+
+    final usersSnapshot =
+        await firestore.collection('users').get();
+
+    if (!context.mounted) return;
+
+    final members = usersSnapshot.docs.toList()
+      ..sort((a, b) {
+        final aPseudo =
+            (a.data()['pseudo'] as String? ?? '').toLowerCase();
+        final bPseudo =
+            (b.data()['pseudo'] as String? ?? '').toLowerCase();
+
+        return aPseudo.compareTo(bPseudo);
+      });
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Attribuer Élu des Twiix'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: members.isEmpty
+              ? const Text('Aucun membre enregistré.')
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: members.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(),
+                  itemBuilder: (context, index) {
+                    final member = members[index];
+                    final data = member.data();
+
+                    final pseudo =
+                        (data['pseudo'] as String?)?.trim();
+
+                    final email =
+                        (data['email'] as String?)?.trim();
+
+                    final displayName =
+                        pseudo != null && pseudo.isNotEmpty
+                            ? pseudo
+                            : 'Membre sans pseudo';
+
+                    return ListTile(
+                      leading: const Icon(
+                        Icons.person_outline,
+                      ),
+                      title: Text(displayName),
+                      subtitle:
+                          email != null && email.isNotEmpty
+                              ? Text(email)
+                              : null,
+                      onTap: () async {
+                        final confirmed =
+                            await showDialog<bool>(
+                          context: dialogContext,
+                          builder: (confirmContext) =>
+                              AlertDialog(
+                            title: const Text(
+                              'Confirmer l’attribution',
+                            ),
+                            content: Text(
+                              'Attribuer le badge '
+                              '« Élu des Twiix » à '
+                              '$displayName ?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(
+                                  confirmContext,
+                                  false,
+                                ),
+                                child:
+                                    const Text('ANNULER'),
+                              ),
+                              FilledButton(
+                                onPressed: () =>
+                                    Navigator.pop(
+                                  confirmContext,
+                                  true,
+                                ),
+                                child:
+                                    const Text('ATTRIBUER'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed != true) {
+                          return;
+                        }
+
+                        final badgeRef = firestore
+                            .collection('users')
+                            .doc(member.id)
+                            .collection('badges')
+                            .doc('secret_chosen');
+
+                        final badgeSnapshot =
+                            await badgeRef.get();
+
+                        if (badgeSnapshot.exists) {
+                          if (!dialogContext.mounted) {
+                            return;
+                          }
+
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '$displayName possède '
+                                'déjà ce badge.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        await badgeRef.set({
+                          'badgeId': 'secret_chosen',
+                          'unlockedAt':
+                              FieldValue.serverTimestamp(),
+                          'awardedBy': admin.uid,
+                        });
+
+                        if (!dialogContext.mounted) {
+                          return;
+                        }
+
+                        Navigator.pop(dialogContext);
+
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Badge Élu des Twiix '
+                              'attribué à $displayName ✓',
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+        ),
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Impossible d’attribuer le badge.',
+        ),
+      ),
+    );
+  }
+}
 
 Future<void> _challengeLibraryDialog(
   BuildContext context,
