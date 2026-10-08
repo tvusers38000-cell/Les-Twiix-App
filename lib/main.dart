@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -4663,6 +4665,11 @@ class AdminPage extends StatelessWidget {
     body: ListenableBuilder(listenable: state, builder: (context, _) => ListView(padding: const EdgeInsets.all(16), children: [
       Container(padding: const EdgeInsets.all(16), decoration: cardDecoration(), child: SwitchListTile(contentPadding: EdgeInsets.zero, value: state.isLive, onChanged: state.setLive, title: const Text('Statut LIVE', style: TextStyle(fontWeight: FontWeight.w900)), subtitle: Text(state.isLive ? 'La communauté voit “EN LIVE”.' : 'La communauté voit “HORS LIVE”.'))),
       const SizedBox(height: 12),
+      AdminAction(
+        icon: Icons.copy,
+        title: 'Copier mon jeton FCM',
+        onTap: () => _copyFcmToken(context),
+      ),
       AdminAction(icon: Icons.campaign, title: 'Publier une actualité', onTap: () => _newsDialog(context, state)),
       AdminAction(icon: Icons.delete_outline, title: 'Gérer les actualités', onTap: () => _manageNewsDialog(context, state)),
       AdminAction(icon: Icons.calendar_month, title: 'Ajouter un live', onTap: () => _liveDialog(context, state)),
@@ -4687,6 +4694,44 @@ class AdminPage extends StatelessWidget {
   );
 }
 
+
+
+Future<void> _copyFcmToken(BuildContext context) async {
+  try {
+    final token = await FirebaseMessaging.instance
+        .getToken()
+        .timeout(const Duration(seconds: 15));
+
+    if (!context.mounted) return;
+
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jeton FCM indisponible. Réessaie.'),
+        ),
+      );
+      return;
+    }
+
+    await Clipboard.setData(ClipboardData(text: token));
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Jeton FCM copié !'),
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Impossible de récupérer le jeton FCM.'),
+      ),
+    );
+  }
+}
 
 Future<void> _chosenBadgeDialog(
   BuildContext context,
