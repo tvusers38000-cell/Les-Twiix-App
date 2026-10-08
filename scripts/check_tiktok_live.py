@@ -31,6 +31,11 @@ async def main():
         if live
         else "État : HORS LIVE"
     )
+
+    if live:
+        room_id = getattr(client, "room_id", None)
+        print(f"Identifiant LIVE : {room_id or 'indisponible'}")
+
     print("Diagnostic uniquement : aucune notification envoyée.")
 
 
