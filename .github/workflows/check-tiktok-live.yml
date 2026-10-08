@@ -1,0 +1,35 @@
+name: Surveillance LIVE TikTok
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: surveillance-tiktok-live
+  cancel-in-progress: false
+
+jobs:
+  check-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Recuperer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installer TikTokLive
+        run: pip install "TikTokLive>=6,<7"
+
+      - name: Verifier le LIVE
+        env:
+          TIKTOK_USERNAME: les_twiix
+        run: python scripts/check_tiktok_live.py
