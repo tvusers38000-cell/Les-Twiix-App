@@ -149,29 +149,171 @@ Future<void> syncAutomaticSecretBadges() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  if (FirebaseAuth.instance.currentUser == null) {
-    await FirebaseAuth.instance.signInAnonymously();
+  runApp(const TwiixStartup());
+}
+
+Future<FirebaseApp>? _startupFirebase;
+
+Future<FirebaseApp> _ensureStartupFirebase() {
+  if (Firebase.apps.isNotEmpty) {
+    return Future.value(Firebase.app());
   }
-  final state = await TwiixState.load();
-  await recordQGVisit();
-  if (state.isLive) { await claimLivePresenceReward(); }
+  return _startupFirebase ??= _initializeStartupFirebase();
+}
 
-  // Synchronise les badges liés aux défis déjà accomplis.
-  // Le comptage repose sur challengeRewards : un même défi
-  // ne peut donc pas être compté plusieurs fois.
-  await syncChallengeBadges();
-  await syncAutomaticSecretBadges();
+Future<FirebaseApp> _initializeStartupFirebase() async {
+  try {
+    return await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (_) {
+    _startupFirebase = null;
+    rethrow;
+  }
+}
 
-  runApp(TwiixApp(state: state));
+Future<void> _runStartupTask(
+  String name,
+  Future<void> Function() task,
+) async {
+  try {
+    await task().timeout(const Duration(seconds: 12));
+  } catch (error) {
+    debugPrint('Twiix démarrage : $name : $error');
+  }
+}
 
-  unawaited(
-    NotificationService.initialize().catchError(
-      (Object _, StackTrace __) {},
-    ),
-  );
+Future<void> _finishStartup(TwiixState state) async {
+  await _runStartupTask('notifications', NotificationService.initialize);
+  await _runStartupTask('visite QG', () async {
+    await recordQGVisit();
+  });
+  if (state.isLive) {
+    await _runStartupTask('présence LIVE', () async {
+      await claimLivePresenceReward();
+    });
+  }
+  await _runStartupTask('badges défis', syncChallengeBadges);
+  await _runStartupTask('badges secrets', syncAutomaticSecretBadges);
+}
+
+class TwiixStartup extends StatefulWidget {
+  const TwiixStartup({super.key});
+
+  @override
+  State<TwiixStartup> createState() => _TwiixStartupState();
+}
+
+class _TwiixStartupState extends State<TwiixStartup> {
+  TwiixState? _state;
+  bool _loading = true;
+  String? _error;
+  Future<void>? _anonymousSignIn;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _signInIfNeeded() async {
+    if (FirebaseAuth.instance.currentUser != null) return;
+    try {
+      await FirebaseAuth.instance.signInAnonymously();
+    } finally {
+      _anonymousSignIn = null;
+    }
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await _ensureStartupFirebase()
+          .timeout(const Duration(seconds: 15));
+
+      if (FirebaseAuth.instance.currentUser == null) {
+        _anonymousSignIn ??= _signInIfNeeded();
+        await _anonymousSignIn!
+            .timeout(const Duration(seconds: 15));
+      }
+
+      final state = await TwiixState.load();
+      if (!mounted) return;
+
+      setState(() {
+        _state = state;
+        _loading = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_finishStartup(state));
+        }
+      });
+    } catch (error, stack) {
+      debugPrint('Twiix ouverture : $error');
+      debugPrintStack(stackTrace: stack);
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error =
+            'Ouverture impossible pour le moment. '
+            'Vérifie ta connexion puis réessaie.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = _state;
+    if (state != null) return TwiixApp(state: state);
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
+      home: Scaffold(
+        backgroundColor: const Color(0xFF07070B),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Les Twiix',
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFF2C7D),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (_loading) ...[
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 18),
+                  const Text('Ouverture du QG…'),
+                ] else ...[
+                  Text(
+                    _error ?? 'Ouverture impossible.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: () => unawaited(_load()),
+                    child: const Text('Réessayer'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class TwiixApp extends StatelessWidget {
@@ -338,7 +480,7 @@ class TwiixState extends ChangeNotifier {
   TwiixState(this.prefs, {required this.isLive, required this.news, required this.lives, required this.donors, required this.challenges, required this.polls});
 
   static Future<TwiixState> load() async {
-    final p = await SharedPreferences.getInstance();
+    final p = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
     List<T> decodeList<T>(String key, T Function(Map<String, dynamic>) build, List<T> fallback) {
       final raw = p.getString(key);
       if (raw == null) return fallback;
@@ -352,7 +494,7 @@ class TwiixState extends ChangeNotifier {
     try {
       final snap = await FirebaseFirestore.instance
           .collection('news')
-          .get();
+          .get().timeout(const Duration(seconds: 6));
       firestoreNews = snap.docs
           .map((doc) => NewsItem.fromJson(doc.data()))
           .toList();
@@ -360,7 +502,7 @@ class TwiixState extends ChangeNotifier {
 
     List<LiveItem>? firestoreLives;
     try {
-      final snap = await FirebaseFirestore.instance.collection('lives').get();
+      final snap = await FirebaseFirestore.instance.collection('lives').get().timeout(const Duration(seconds: 6));
       final now = DateTime.now();
       firestoreLives = snap.docs.map((doc) {
         final data = doc.data();
@@ -384,7 +526,7 @@ class TwiixState extends ChangeNotifier {
 
     List<PollItem> firestorePolls = [];
     try {
-      final snap = await FirebaseFirestore.instance.collection('polls').get();
+      final snap = await FirebaseFirestore.instance.collection('polls').get().timeout(const Duration(seconds: 6));
       firestorePolls = snap.docs.map((doc) {
         final data = doc.data();
         final endTimestamp = data['endAt'];
@@ -411,7 +553,7 @@ class TwiixState extends ChangeNotifier {
     try {
       final snap = await FirebaseFirestore.instance
           .collection('challenges')
-          .get();
+          .get().timeout(const Duration(seconds: 6));
 
       final now = DateTime.now();
 
@@ -498,7 +640,7 @@ class TwiixState extends ChangeNotifier {
       final liveStateSnapshot = await FirebaseFirestore.instance
           .collection('app_state')
           .doc('live')
-          .get();
+          .get().timeout(const Duration(seconds: 6));
 
       if (liveStateSnapshot.exists) {
         firestoreIsLive =
